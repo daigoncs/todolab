@@ -17,14 +17,34 @@ export class TodoStore {
 
   carregar() {
     if (!this.armazenamento) return [];
-    const bruto = this.armazenamento.getItem(CHAVE);
-    if (!bruto) return [];
-    return JSON.parse(bruto);
+    try {
+      const bruto = this.armazenamento.getItem(CHAVE);
+      if (!bruto) return [];
+      const tarefas = JSON.parse(bruto);
+      if (!Array.isArray(tarefas)) return [];
+      const tarefasValidas = tarefas.every((tarefa) =>
+        tarefa &&
+        typeof tarefa === 'object' &&
+        !Array.isArray(tarefa) &&
+        typeof tarefa.id === 'string' &&
+        tarefa.id.length > 0 &&
+        typeof tarefa.titulo === 'string' &&
+        tarefa.titulo.trim().length > 0 &&
+        typeof tarefa.concluida === 'boolean' &&
+        typeof tarefa.criadaEm === 'string' &&
+        tarefa.criadaEm.length > 0,
+      );
+      return tarefasValidas ? tarefas : [];
+    } catch {
+      return [];
+    }
   }
 
   salvar() {
     if (!this.armazenamento) return;
-    this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
+    try {
+      this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
+    } catch {}
   }
 
   listar() {
