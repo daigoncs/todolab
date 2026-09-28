@@ -32,8 +32,10 @@ export class TodoStore {
   }
 
   adicionar(titulo) {
-    if (!titulo) return null;
-    const tarefa = criarTarefa(titulo);
+    if (typeof titulo !== 'string') return null;
+    const tituloTratado = titulo.trim();
+    if (!tituloTratado) return null;
+    const tarefa = criarTarefa(tituloTratado);
     this.tarefas.push(tarefa);
     this.salvar();
     return tarefa;
