@@ -49,9 +49,8 @@ export class TodoStore {
   }
 
   remover(id) {
-    const alvo = this.tarefas.find((tarefa) => tarefa.id === id);
-    if (!alvo) return;
-    const indice = this.tarefas.findIndex((tarefa) => tarefa.titulo === alvo.titulo);
+    const indice = this.tarefas.findIndex((tarefa) => tarefa.id === id);
+    if (indice === -1) return;
     this.tarefas.splice(indice, 1);
     this.salvar();
   }
