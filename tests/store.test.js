@@ -87,3 +87,60 @@ export function testarAlternanciaGlobalDeTarefas() {
 }
 
 test('alternarTodas conclui listas mistas e reabre listas concluídas com persistência', testarAlternanciaGlobalDeTarefas);
+
+export function testarPersistenciaResiliente() {
+  let dadosSalvos = null;
+  const armazenamento = {
+    getItem() {
+      return dadosSalvos;
+    },
+    setItem(chave, valor) {
+      dadosSalvos = valor;
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const tarefaConcluida = store.adicionar('Tarefa concluída');
+  const tarefaPendente = store.adicionar('Tarefa pendente');
+  store.alternar(tarefaConcluida.id);
+  const estadoSalvo = store.listar();
+
+  const storeRestaurada = new TodoStore(armazenamento);
+  assert.deepEqual(storeRestaurada.listar(), estadoSalvo, 'deve restaurar todos os campos e estados salvos');
+  assert.equal(storeRestaurada.listar()[0].concluida, true);
+  assert.equal(storeRestaurada.listar()[1].concluida, false);
+
+  const casosInvalidos = [null, '', '{json corrompido', '{"tarefas":[]}', '[null]', '[{"id":"1"}]'];
+  for (const dados of casosInvalidos) {
+    const armazenamentoInvalido = {
+      getItem() {
+        return dados;
+      },
+      setItem() {},
+    };
+    const storeComDadosInvalidos = new TodoStore(armazenamentoInvalido);
+    assert.deepEqual(storeComDadosInvalidos.listar(), [], `deve iniciar vazia com dados ${JSON.stringify(dados)}`);
+    assert.ok(storeComDadosInvalidos.adicionar('Nova tarefa'), 'deve continuar aceitando operações');
+    assert.equal(storeComDadosInvalidos.listar().length, 1);
+  }
+
+  const armazenamentoIndisponivel = {
+    getItem() {
+      throw new Error('leitura bloqueada');
+    },
+    setItem() {
+      throw new Error('gravação bloqueada');
+    },
+  };
+  const storeSemAcessoAoArmazenamento = new TodoStore(armazenamentoIndisponivel);
+  assert.deepEqual(storeSemAcessoAoArmazenamento.listar(), [], 'falha de leitura deve iniciar com lista vazia');
+  assert.doesNotThrow(() => storeSemAcessoAoArmazenamento.adicionar('Uso em memória'));
+  assert.equal(storeSemAcessoAoArmazenamento.listar()[0].titulo, 'Uso em memória');
+
+  const storeSemArmazenamento = new TodoStore(null);
+  assert.deepEqual(storeSemArmazenamento.listar(), []);
+  assert.ok(storeSemArmazenamento.adicionar('Sem localStorage'));
+  assert.equal(storeSemArmazenamento.listar().length, 1);
+  assert.equal(tarefaPendente.concluida, false);
+}
+
+test('carregar e salvar mantêm a aplicação utilizável diante de dados ou armazenamento inválidos', testarPersistenciaResiliente);
