@@ -77,6 +77,12 @@ input, button { font: inherit; }
 .composer button { padding: 0 24px; color: #101210; background: var(--acid); border: 1px solid var(--acid); cursor: pointer; font-weight: 500; }
 .composer button:hover { background: var(--ink); border-color: var(--ink); }
 
+.toggle-all-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 26px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: .72rem; text-transform: uppercase; }
+.toggle-all-row input { width: 19px; height: 19px; accent-color: var(--acid); }
+.toggle-all-row input:disabled { opacity: .45; }
+.toggle-all-row label { cursor: pointer; }
+.toggle-all-row input:disabled + label { cursor: not-allowed; }
+
 .todo-list { list-style: none; margin: 0; padding: 0 26px; }
 .todo { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; min-height: 64px; border-bottom: 1px solid var(--line); animation: arrive .25s ease-out both; }
 .todo input { width: 19px; height: 19px; accent-color: var(--acid); }
