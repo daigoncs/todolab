@@ -77,6 +77,15 @@ export class TodoStore {
     this.salvar();
   }
 
+  limparConcluidas() {
+    const tarefasPendentes = this.tarefas.filter((tarefa) => !tarefa.concluida);
+    const removidas = this.tarefas.length - tarefasPendentes.length;
+    if (removidas === 0) return 0;
+    this.tarefas = tarefasPendentes;
+    this.salvar();
+    return removidas;
+  }
+
   remover(id) {
     const indice = this.tarefas.findIndex((tarefa) => tarefa.id === id);
     if (indice === -1) return;

@@ -4,6 +4,7 @@ const store = new TodoStore();
 const form = document.querySelector('#todo-form');
 const input = document.querySelector('#todo-input');
 const toggleAll = document.querySelector('#toggle-all');
+const clearCompleted = document.querySelector('#clear-completed');
 const list = document.querySelector('#todo-list');
 const emptyState = document.querySelector('#empty-state');
 
@@ -13,6 +14,7 @@ function render() {
   emptyState.hidden = tarefas.length > 0;
   toggleAll.checked = tarefas.length > 0 && tarefas.every((tarefa) => tarefa.concluida);
   toggleAll.disabled = tarefas.length === 0;
+  clearCompleted.disabled = !tarefas.some((tarefa) => tarefa.concluida);
 
   for (const tarefa of tarefas) {
     const item = document.createElement('li');
@@ -48,6 +50,11 @@ function render() {
 
 toggleAll.addEventListener('change', () => {
   store.alternarTodas();
+  render();
+});
+
+clearCompleted.addEventListener('click', () => {
+  store.limparConcluidas();
   render();
 });
 

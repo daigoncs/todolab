@@ -93,6 +93,9 @@ input, button { font: inherit; }
 .workbench__footer { color: var(--muted); font-size: .72rem; }
 .workbench__footer p { margin: 0; }
 .build-mark { text-transform: uppercase; }
+.clear-completed { padding: 8px 10px; color: var(--orange); background: transparent; border: 1px solid var(--line); cursor: pointer; font-size: .68rem; text-transform: uppercase; }
+.clear-completed:hover:not(:disabled) { color: var(--night); background: var(--orange); border-color: var(--orange); }
+.clear-completed:disabled { opacity: .45; cursor: not-allowed; }
 
 .contract { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; max-width: 590px; margin: 54px 0 0 auto; }
 .contract__number { color: var(--orange); font-family: 'Bodoni MT', Didot, Georgia, serif; font-size: 4rem; line-height: .8; }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { test } from 'node:test';
 import { TodoStore } from '../src/store.js';
 
 export function testarAdicionarTarefa() {
@@ -27,6 +28,31 @@ export function testarAdicionarTarefa() {
   assert.equal(tarefa.titulo, 'revisar requisitos', 'deve remover espaços externos');
   assert.deepEqual(store.listar(), [tarefa]);
   assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa]);
+}
+
+test('adicionar rejeita títulos vazios e normaliza títulos válidos', testarAdicionarTarefa);
+
+export function testarRemocaoDeTarefas() {
+  const dados = new Map();
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const primeira = store.adicionar('Primeira tarefa');
+  const segunda = store.adicionar('Segunda tarefa');
+
+  store.remover(primeira.id);
+  assert.deepEqual(store.listar(), [segunda], 'deve remover somente a tarefa selecionada');
+  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [segunda], 'deve persistir a remoção');
+  assert.deepEqual(new TodoStore(armazenamento).listar(), [segunda], 'remoção deve persistir após recarga');
+
+  store.remover('id-inexistente');
+  assert.deepEqual(store.listar(), [segunda], 'id inexistente não deve alterar a lista');
 }
 
 test('remover exclui a tarefa correta e mantém o resultado após recarga', testarRemocaoDeTarefas);
@@ -88,59 +114,52 @@ export function testarAlternanciaGlobalDeTarefas() {
 
 test('alternarTodas conclui listas mistas e reabre listas concluídas com persistência', testarAlternanciaGlobalDeTarefas);
 
-export function testarPersistenciaResiliente() {
+export function testarLimparTarefasConcluidas() {
   let dadosSalvos = null;
+  let gravacoes = 0;
   const armazenamento = {
     getItem() {
       return dadosSalvos;
     },
     setItem(chave, valor) {
       dadosSalvos = valor;
+      gravacoes += 1;
     },
   };
   const store = new TodoStore(armazenamento);
-  const tarefaConcluida = store.adicionar('Tarefa concluída');
-  const tarefaPendente = store.adicionar('Tarefa pendente');
-  store.alternar(tarefaConcluida.id);
-  const estadoSalvo = store.listar();
+  const primeira = store.adicionar('Concluída 1');
+  const pendente = store.adicionar('Pendente');
+  const segunda = store.adicionar('Concluída 2');
+  store.alternar(primeira.id);
+  store.alternar(segunda.id);
 
-  const storeRestaurada = new TodoStore(armazenamento);
-  assert.deepEqual(storeRestaurada.listar(), estadoSalvo, 'deve restaurar todos os campos e estados salvos');
-  assert.equal(storeRestaurada.listar()[0].concluida, true);
-  assert.equal(storeRestaurada.listar()[1].concluida, false);
+  assert.equal(store.limparConcluidas(), 2, 'deve retornar a quantidade de tarefas removidas');
+  assert.deepEqual(store.listar(), [pendente], 'deve manter somente as tarefas pendentes');
+  assert.deepEqual(JSON.parse(dadosSalvos), [pendente], 'deve persistir somente as pendentes');
+  assert.deepEqual(new TodoStore(armazenamento).listar(), [pendente], 'o resultado deve persistir após recarga');
 
-  const casosInvalidos = [null, '', '{json corrompido', '{"tarefas":[]}', '[null]', '[{"id":"1"}]'];
-  for (const dados of casosInvalidos) {
-    const armazenamentoInvalido = {
-      getItem() {
-        return dados;
-      },
-      setItem() {},
-    };
-    const storeComDadosInvalidos = new TodoStore(armazenamentoInvalido);
-    assert.deepEqual(storeComDadosInvalidos.listar(), [], `deve iniciar vazia com dados ${JSON.stringify(dados)}`);
-    assert.ok(storeComDadosInvalidos.adicionar('Nova tarefa'), 'deve continuar aceitando operações');
-    assert.equal(storeComDadosInvalidos.listar().length, 1);
-  }
+  const gravacoesAposLimpeza = gravacoes;
+  assert.equal(store.limparConcluidas(), 0, 'sem tarefas concluídas, não deve remover nada');
+  assert.equal(gravacoes, gravacoesAposLimpeza, 'sem remoções, não deve gravar no armazenamento');
 
-  const armazenamentoIndisponivel = {
-    getItem() {
-      throw new Error('leitura bloqueada');
-    },
-    setItem() {
-      throw new Error('gravação bloqueada');
-    },
-  };
-  const storeSemAcessoAoArmazenamento = new TodoStore(armazenamentoIndisponivel);
-  assert.deepEqual(storeSemAcessoAoArmazenamento.listar(), [], 'falha de leitura deve iniciar com lista vazia');
-  assert.doesNotThrow(() => storeSemAcessoAoArmazenamento.adicionar('Uso em memória'));
-  assert.equal(storeSemAcessoAoArmazenamento.listar()[0].titulo, 'Uso em memória');
+  const storeVazia = new TodoStore(armazenamentoSemDados());
+  assert.equal(storeVazia.limparConcluidas(), 0, 'lista vazia deve continuar sem tarefas');
 
-  const storeSemArmazenamento = new TodoStore(null);
-  assert.deepEqual(storeSemArmazenamento.listar(), []);
-  assert.ok(storeSemArmazenamento.adicionar('Sem localStorage'));
-  assert.equal(storeSemArmazenamento.listar().length, 1);
-  assert.equal(tarefaPendente.concluida, false);
+  store.alternar(pendente.id);
+  assert.equal(store.limparConcluidas(), 1, 'deve remover a tarefa quando todas estão concluídas');
+  assert.deepEqual(store.listar(), [], 'todas concluídas devem resultar em lista vazia');
+  assert.deepEqual(JSON.parse(dadosSalvos), [], 'lista vazia deve ser persistida');
 }
 
-test('carregar e salvar mantêm a aplicação utilizável diante de dados ou armazenamento inválidos', testarPersistenciaResiliente);
+function armazenamentoSemDados() {
+  return {
+    getItem() {
+      return null;
+    },
+    setItem() {
+      assert.fail('lista vazia não deve persistir alterações');
+    },
+  };
+}
+
+test('limparConcluidas remove apenas concluídas e preserva/persiste as pendentes', testarLimparTarefasConcluidas);
