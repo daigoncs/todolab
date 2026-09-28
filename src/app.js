@@ -6,16 +6,38 @@ const input = document.querySelector('#todo-input');
 const formFeedback = document.querySelector('#form-feedback');
 const toggleAll = document.querySelector('#toggle-all');
 const clearCompleted = document.querySelector('#clear-completed');
+const filters = document.querySelector('#todo-filters');
 const list = document.querySelector('#todo-list');
 const emptyState = document.querySelector('#empty-state');
+const filtrosValidos = ['all', 'active', 'completed'];
+
+function obterFiltroDaRota() {
+  const filtro = window.location.hash.replace(/^#\/?/, '');
+  return filtrosValidos.includes(filtro) ? filtro : 'all';
+}
+
+let filtroAtual = obterFiltroDaRota();
 
 function render() {
-  const tarefas = store.listar();
+  const todasAsTarefas = store.listar();
+  const tarefas = store.filtrar(filtroAtual);
   list.replaceChildren();
   emptyState.hidden = tarefas.length > 0;
-  toggleAll.checked = tarefas.length > 0 && tarefas.every((tarefa) => tarefa.concluida);
-  toggleAll.disabled = tarefas.length === 0;
-  clearCompleted.disabled = !tarefas.some((tarefa) => tarefa.concluida);
+  emptyState.textContent = todasAsTarefas.length === 0
+    ? 'Nenhuma tarefa ainda. Comece com um critério claro.'
+    : filtroAtual === 'active'
+      ? 'Nenhuma tarefa ativa.'
+      : filtroAtual === 'completed'
+        ? 'Nenhuma tarefa concluída.'
+        : 'Nenhuma tarefa ainda. Comece com um critério claro.';
+  toggleAll.checked = todasAsTarefas.length > 0 && todasAsTarefas.every((tarefa) => tarefa.concluida);
+  toggleAll.disabled = todasAsTarefas.length === 0;
+  clearCompleted.disabled = !todasAsTarefas.some((tarefa) => tarefa.concluida);
+
+  for (const link of filters.querySelectorAll('[data-filter]')) {
+    if (link.dataset.filter === filtroAtual) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
 
   for (const tarefa of tarefas) {
     const item = document.createElement('li');
@@ -51,6 +73,11 @@ function render() {
 
 toggleAll.addEventListener('change', () => {
   store.alternarTodas();
+  render();
+});
+
+window.addEventListener('hashchange', () => {
+  filtroAtual = obterFiltroDaRota();
   render();
 });
 

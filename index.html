@@ -35,6 +35,12 @@
         </form>
         <p id="form-feedback" class="form-feedback" role="status" aria-live="polite"></p>
 
+        <nav id="todo-filters" class="todo-filters" aria-label="Filtrar tarefas">
+          <a href="#/" data-filter="all">Todas</a>
+          <a href="#/active" data-filter="active">O que falta</a>
+          <a href="#/completed" data-filter="completed">Concluídas</a>
+        </nav>
+
         <div class="toggle-all-row">
           <input id="toggle-all" type="checkbox" disabled />
           <label for="toggle-all">Marcar / desmarcar todas</label>
