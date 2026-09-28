@@ -1,0 +1,64 @@
+name: "🐛 Relato de Defeito / Bug"
+description: "Relate um defeito observado na aplicação em produção ou homologação"
+title: "fix(tasks): "
+labels: ["tipo:bug", "status:triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### TodoLab — Relato de Defeito (Bug Report)
+        Utilize este formulário para formalizar falhas observadas durante o Smoke Test na URL pública ou na validação da squad.
+
+  - type: textarea
+    id: descricao_defeito
+    attributes:
+      label: Descrição do Defeito
+      description: Explique o que aconteceu de errado de forma clara e concisa.
+    validations:
+      required: true
+
+  - type: textarea
+    id: passos_reproducao
+    attributes:
+      label: Passos para Reproduzir
+      description: Liste os passos exatos para que a falha seja reproduzida.
+      placeholder: |
+        1. Acesse a URL pública no navegador em aba anônima.
+        2. No campo de nova tarefa, digite "   " (três espaços).
+        3. Pressione a tecla Enter ou clique em Adicionar.
+        4. Observe que uma tarefa em branco foi adicionada à lista.
+    validations:
+      required: true
+
+  - type: textarea
+    id: comportamento_esperado_observado
+    attributes:
+      label: Comportamento Esperado vs. Observado
+      placeholder: |
+        - Comportamento Esperado: O sistema deve ignorar o envio e manter a lista inalterada.
+        - Comportamento Observado: Uma tarefa vazia foi criada com checkbox interativo.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severidade
+    attributes:
+      label: Severidade do Defeito
+      description: Qual é o impacto desta falha no funcionamento do produto?
+      options:
+        - "Alta (Bloqueia funcionalidade essencial ou polui dados)"
+        - "Média (Funcionalidade degradada com solução de contorno)"
+        - "Baixa (Inconsistência visual ou de usabilidade superficial)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: evidencias_anexas
+    attributes:
+      label: Evidências e Rastreabilidade
+      options:
+        - label: "Confirmo que reproduzi o erro em janela anônima para evitar cache."
+          required: true
+        - label: "Prints ou gravações da falha foram anexados neste relato."
+          required: false

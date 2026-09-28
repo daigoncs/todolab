@@ -1,0 +1,76 @@
+name: "📋 Nova Demanda / Funcionalidade"
+description: "Especifique o comportamento esperado com critérios BDD e portão DoR"
+title: "feat(tasks): "
+labels: ["tipo:feature", "status:ready"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### TodoLab — Especificação da Demanda
+        Preencha os campos abaixo com base no backlog priorizado com o professor.
+        *Qualidade começa na clareza do requisito antes de encostar no código.*
+
+  - type: dropdown
+    id: item_backlog
+    attributes:
+      label: Item do Backlog
+      description: Selecione o item que sua squad está implementando nesta rodada.
+      options:
+        - "A2 — Impedir tarefas vazias ou com espaços"
+        - "A3 — Limpar tarefas concluídas"
+        - "B1 — Filtros por estado (todas / ativas / concluídas)"
+        - "A4 — Persistência confiável de dados"
+        - "Outro (especificado na descrição)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: historia_usuario
+    attributes:
+      label: História de Usuário (Necessidade de Negócio)
+      description: Formalize quem se beneficia e qual é o valor esperado.
+      placeholder: |
+        Como usuário do TodoLab,
+        Quero que o sistema ignore tentativas de adicionar tarefas sem texto,
+        Para que minha lista de tarefas não fique poluída com itens em branco.
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios_bdd
+    attributes:
+      label: Critérios de Aceite (BDD — Dado / Quando / Então)
+      description: Defina o comportamento observável que será testado pelo QA e guiado no Copilot.
+      placeholder: |
+        - Cenário 1 (Caminho Feliz):
+          Dado que digito "Estudar QA" no campo de entrada,
+          Quando clico em "Adicionar" ou aperto Enter,
+          Então a tarefa deve aparecer na lista e o contador deve incrementar.
+
+        - Cenário 2 (Casos de Borda — Espaços em branco):
+          Dado que o campo de entrada contém apenas espaços "   ",
+          Quando clico no botão "Adicionar Tarefa",
+          Então nenhuma tarefa deve ser criada e o campo deve permanecer limpo.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fora_escopo
+    attributes:
+      label: Fora do Escopo
+      description: O que esta entrega deliberadamente NÃO deve fazer?
+      placeholder: "Ex.: Não altera o CSS existente, não adiciona bibliotecas externas."
+
+  - type: checkboxes
+    id: dor_checklist
+    attributes:
+      label: Portão de Entrada — Checklist da DoR (Definition of Ready)
+      description: Marque as condições que foram satisfeitas antes de iniciar o desenvolvimento.
+      options:
+        - label: "Os critérios estão em formato BDD (Dado / Quando / Então) verificável sem ambiguidade."
+          required: true
+        - label: "Os casos de borda e entradas inválidas foram contemplados."
+          required: true
+        - label: "A demanda foi apresentada e validada pelo professor em sala."
+          required: true
