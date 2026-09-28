@@ -44,6 +44,48 @@ export function testarAdicionarTarefa() {
 
 test('adicionar rejeita títulos vazios e normaliza títulos válidos', testarAdicionarTarefa);
 
+export function testarEdicaoDeTarefa() {
+  const dados = new Map();
+  let gravacoes = 0;
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+      gravacoes += 1;
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const tarefa = store.adicionar('Título original');
+  const gravacoesAntesDaEdicao = gravacoes;
+
+  const atualizada = store.editar(tarefa.id, '  Título corrigido\t ');
+  assert.equal(atualizada, tarefa, 'deve atualizar a tarefa identificada');
+  assert.equal(tarefa.titulo, 'Título corrigido', 'deve remover espaços externos do novo título');
+  assert.equal(gravacoes, gravacoesAntesDaEdicao + 1, 'deve persistir a alteração válida');
+  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa]);
+  assert.deepEqual(new TodoStore(armazenamento).listar(), [tarefa], 'a edição deve persistir após recarga');
+
+  for (const titulo of ['', '   ', '\t\n ', null, 42]) {
+    const tituloAntes = tarefa.titulo;
+    const gravacoesAntes = gravacoes;
+    assert.equal(store.editar(tarefa.id, titulo), null, `deve rejeitar ${JSON.stringify(titulo)}`);
+    assert.equal(tarefa.titulo, tituloAntes, 'entrada inválida deve manter o texto anterior');
+    assert.equal(gravacoes, gravacoesAntes, 'entrada inválida não deve persistir');
+  }
+
+  const gravacoesAntesDeIdInexistente = gravacoes;
+  assert.equal(store.editar('id-inexistente', 'Outro título'), null);
+  assert.equal(gravacoes, gravacoesAntesDeIdInexistente, 'ID inexistente não deve persistir');
+
+  const gravacoesAntesDoMesmoTitulo = gravacoes;
+  assert.equal(store.editar(tarefa.id, ' Título corrigido '), tarefa);
+  assert.equal(gravacoes, gravacoesAntesDoMesmoTitulo, 'mesmo título normalizado não precisa ser gravado novamente');
+}
+
+test('editar atualiza e persiste títulos válidos sem perder o original em entradas inválidas', testarEdicaoDeTarefa);
+
 export function testarRemocaoDeTarefas() {
   const dados = new Map();
   const armazenamento = {

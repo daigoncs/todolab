@@ -55,6 +55,42 @@ function render() {
 
     const title = document.createElement('span');
     title.textContent = tarefa.titulo;
+    title.addEventListener('dblclick', () => {
+      const editor = document.createElement('input');
+      editor.type = 'text';
+      editor.className = 'todo__edit';
+      editor.value = tarefa.titulo;
+      editor.setAttribute('aria-label', `Editar ${tarefa.titulo}`);
+      let finalizada = false;
+
+      const finalizar = (salvar) => {
+        if (finalizada) return;
+        finalizada = true;
+
+        if (salvar) {
+          const tarefaAtualizada = store.editar(tarefa.id, editor.value);
+          title.textContent = tarefaAtualizada?.titulo ?? tarefa.titulo;
+          checkbox.setAttribute('aria-label', `Marcar ${title.textContent} como concluída`);
+          remove.setAttribute('aria-label', `Remover ${title.textContent}`);
+        }
+
+        item.replaceChild(title, editor);
+      };
+
+      editor.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          finalizar(true);
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          finalizar(false);
+        }
+      });
+      editor.addEventListener('blur', () => finalizar(true));
+      item.replaceChild(editor, title);
+      editor.focus();
+      editor.select();
+    });
 
     const remove = document.createElement('button');
     remove.type = 'button';
