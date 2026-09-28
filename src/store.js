@@ -48,6 +48,15 @@ export class TodoStore {
     this.salvar();
   }
 
+  alternarTodas() {
+    if (this.tarefas.length === 0) return;
+    const marcarComoConcluidas = !this.tarefas.every((tarefa) => tarefa.concluida);
+    for (const tarefa of this.tarefas) {
+      tarefa.concluida = marcarComoConcluidas;
+    }
+    this.salvar();
+  }
+
   remover(id) {
     const indice = this.tarefas.findIndex((tarefa) => tarefa.id === id);
     if (indice === -1) return;

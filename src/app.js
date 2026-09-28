@@ -3,6 +3,7 @@ import { TodoStore } from './store.js';
 const store = new TodoStore();
 const form = document.querySelector('#todo-form');
 const input = document.querySelector('#todo-input');
+const toggleAll = document.querySelector('#toggle-all');
 const list = document.querySelector('#todo-list');
 const emptyState = document.querySelector('#empty-state');
 
@@ -10,6 +11,8 @@ function render() {
   const tarefas = store.listar();
   list.replaceChildren();
   emptyState.hidden = tarefas.length > 0;
+  toggleAll.checked = tarefas.length > 0 && tarefas.every((tarefa) => tarefa.concluida);
+  toggleAll.disabled = tarefas.length === 0;
 
   for (const tarefa of tarefas) {
     const item = document.createElement('li');
@@ -42,6 +45,11 @@ function render() {
     list.append(item);
   }
 }
+
+toggleAll.addEventListener('change', () => {
+  store.alternarTodas();
+  render();
+});
 
 form.addEventListener('submit', (event) => {
   event.preventDefault();
