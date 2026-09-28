@@ -3,6 +3,7 @@ import { TodoStore } from './store.js';
 const store = new TodoStore();
 const form = document.querySelector('#todo-form');
 const input = document.querySelector('#todo-input');
+const formFeedback = document.querySelector('#form-feedback');
 const toggleAll = document.querySelector('#toggle-all');
 const clearCompleted = document.querySelector('#clear-completed');
 const list = document.querySelector('#todo-list');
@@ -60,11 +61,28 @@ clearCompleted.addEventListener('click', () => {
 
 form.addEventListener('submit', (event) => {
   event.preventDefault();
-  const tarefa = store.adicionar(input.value);
-  if (!tarefa) return;
-  input.value = '';
-  input.focus();
-  render();
+  formFeedback.textContent = '';
+  formFeedback.className = 'form-feedback';
+
+  try {
+    const tarefa = store.adicionar(input.value);
+    if (!tarefa) {
+      formFeedback.textContent = 'Digite uma tarefa antes de adicionar.';
+      formFeedback.classList.add('form-feedback--error');
+      input.focus();
+      return;
+    }
+
+    formFeedback.textContent = `Tarefa "${tarefa.titulo}" salva com sucesso.`;
+    formFeedback.classList.add('form-feedback--success');
+    input.value = '';
+    input.focus();
+    render();
+  } catch {
+    formFeedback.textContent = 'Não foi possível salvar a tarefa. O texto continua no campo; tente novamente.';
+    formFeedback.classList.add('form-feedback--error');
+    input.focus();
+  }
 });
 
 render();

@@ -76,6 +76,10 @@ input, button { font: inherit; }
 .composer input:focus { border-color: var(--acid); box-shadow: inset 4px 0 0 var(--acid); }
 .composer button { padding: 0 24px; color: #101210; background: var(--acid); border: 1px solid var(--acid); cursor: pointer; font-weight: 500; }
 .composer button:hover { background: var(--ink); border-color: var(--ink); }
+.form-feedback { min-height: 0; margin: 0; padding: 0 26px; font-size: .75rem; }
+.form-feedback:not(:empty) { padding-top: 12px; }
+.form-feedback--success { color: var(--acid); }
+.form-feedback--error { color: var(--orange); }
 
 .toggle-all-row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 26px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: .72rem; text-transform: uppercase; }
 .toggle-all-row input { width: 19px; height: 19px; accent-color: var(--acid); }

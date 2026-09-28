@@ -37,7 +37,12 @@ export class TodoStore {
     if (!tituloTratado) return null;
     const tarefa = criarTarefa(tituloTratado);
     this.tarefas.push(tarefa);
-    this.salvar();
+    try {
+      this.salvar();
+    } catch (erro) {
+      this.tarefas.pop();
+      throw erro;
+    }
     return tarefa;
   }
 

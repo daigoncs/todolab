@@ -28,6 +28,18 @@ export function testarAdicionarTarefa() {
   assert.equal(tarefa.titulo, 'revisar requisitos', 'deve remover espaços externos');
   assert.deepEqual(store.listar(), [tarefa]);
   assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa]);
+
+  const armazenamentoComFalha = {
+    getItem() {
+      return null;
+    },
+    setItem() {
+      throw new Error('falha simulada de persistência');
+    },
+  };
+  const storeComFalha = new TodoStore(armazenamentoComFalha);
+  assert.throws(() => storeComFalha.adicionar('não perder este texto'), /falha simulada/);
+  assert.deepEqual(storeComFalha.listar(), [], 'falha ao salvar deve desfazer a inclusão na memória');
 }
 
 test('adicionar rejeita títulos vazios e normaliza títulos válidos', testarAdicionarTarefa);
