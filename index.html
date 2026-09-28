@@ -30,9 +30,16 @@
 
         <form id="todo-form" class="composer">
           <label class="sr-only" for="todo-input">Nova tarefa</label>
-          <input id="todo-input" name="title" autocomplete="off" placeholder="O que precisa ser feito?" />
+          <input id="todo-input" name="title" autocomplete="off" aria-describedby="form-feedback" placeholder="O que precisa ser feito?" />
           <button type="submit">Adicionar</button>
         </form>
+        <p id="form-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+
+        <nav id="todo-filters" class="todo-filters" aria-label="Filtrar tarefas">
+          <a href="#/" data-filter="all">Todas</a>
+          <a href="#/active" data-filter="active">O que falta</a>
+          <a href="#/completed" data-filter="completed">Concluídas</a>
+        </nav>
 
         <div class="toggle-all-row">
           <input id="toggle-all" type="checkbox" disabled />

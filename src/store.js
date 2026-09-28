@@ -51,13 +51,24 @@ export class TodoStore {
     return [...this.tarefas];
   }
 
+  filtrar(filtro = 'all') {
+    if (filtro === 'active') return this.tarefas.filter((tarefa) => !tarefa.concluida);
+    if (filtro === 'completed') return this.tarefas.filter((tarefa) => tarefa.concluida);
+    return this.listar();
+  }
+
   adicionar(titulo) {
     if (typeof titulo !== 'string') return null;
     const tituloTratado = titulo.trim();
     if (!tituloTratado) return null;
     const tarefa = criarTarefa(tituloTratado);
     this.tarefas.push(tarefa);
-    this.salvar();
+    try {
+      this.salvar();
+    } catch (erro) {
+      this.tarefas.pop();
+      throw erro;
+    }
     return tarefa;
   }
 

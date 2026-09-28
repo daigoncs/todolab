@@ -28,6 +28,18 @@ export function testarAdicionarTarefa() {
   assert.equal(tarefa.titulo, 'revisar requisitos', 'deve remover espaços externos');
   assert.deepEqual(store.listar(), [tarefa]);
   assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa]);
+
+  const armazenamentoComFalha = {
+    getItem() {
+      return null;
+    },
+    setItem() {
+      throw new Error('falha simulada de persistência');
+    },
+  };
+  const storeComFalha = new TodoStore(armazenamentoComFalha);
+  assert.throws(() => storeComFalha.adicionar('não perder este texto'), /falha simulada/);
+  assert.deepEqual(storeComFalha.listar(), [], 'falha ao salvar deve desfazer a inclusão na memória');
 }
 
 test('adicionar rejeita títulos vazios e normaliza títulos válidos', testarAdicionarTarefa);
@@ -163,3 +175,33 @@ function armazenamentoSemDados() {
 }
 
 test('limparConcluidas remove apenas concluídas e preserva/persiste as pendentes', testarLimparTarefasConcluidas);
+
+export function testarFiltrarTarefas() {
+  const dados = new Map();
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const primeiraAtiva = store.adicionar('Ativa 1');
+  const concluida = store.adicionar('Concluída');
+  const segundaAtiva = store.adicionar('Ativa 2');
+  store.alternar(concluida.id);
+
+  assert.deepEqual(store.filtrar('all'), [primeiraAtiva, concluida, segundaAtiva]);
+  assert.deepEqual(store.filtrar('active'), [primeiraAtiva, segundaAtiva]);
+  assert.deepEqual(store.filtrar('completed'), [concluida]);
+  assert.deepEqual(store.filtrar('invalid-filter'), [primeiraAtiva, concluida, segundaAtiva]);
+  assert.deepEqual(store.listar(), [primeiraAtiva, concluida, segundaAtiva]);
+
+  const storeVazia = new TodoStore({ getItem: () => null, setItem() {} });
+  assert.deepEqual(storeVazia.filtrar('all'), []);
+  assert.deepEqual(storeVazia.filtrar('active'), []);
+  assert.deepEqual(storeVazia.filtrar('completed'), []);
+}
+
+test('filtrar mostra todas, ativas ou concluídas sem alterar a lista', testarFiltrarTarefas);
