@@ -86,6 +86,7 @@ input, button { font: inherit; }
 .todo-list { list-style: none; margin: 0; padding: 0 26px; }
 .todo { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; min-height: 64px; border-bottom: 1px solid var(--line); animation: arrive .25s ease-out both; }
 .todo input { width: 19px; height: 19px; accent-color: var(--acid); }
+.todo .todo__edit { width: 100%; min-width: 0; padding: 8px 10px; color: var(--ink); background: #0f110f; border: 1px solid var(--acid); outline: none; }
 .todo--done span { color: var(--muted); text-decoration: line-through; }
 .remove { color: var(--orange); background: transparent; border: 0; cursor: pointer; font-size: .72rem; text-transform: uppercase; }
 .remove:hover { text-decoration: underline; }
