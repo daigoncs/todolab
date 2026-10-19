@@ -106,6 +106,50 @@ export function testarStatusPadraoDaTarefa() {
 
 test('tarefas recebem status padrão sem perder dados ou interromper a listagem', testarStatusPadraoDaTarefa);
 
+export function testarValidacaoDeStatus() {
+  const dados = new Map();
+  let gravacoes = 0;
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+      gravacoes += 1;
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const tarefa = store.adicionar('Validar status');
+
+  for (const status of ['novo', 'em-progresso', 'em-revisao', 'concluido']) {
+    assert.equal(store.atualizarStatus(tarefa.id, status), tarefa, `deve aceitar ${status}`);
+    assert.equal(tarefa.status, status, `deve definir ${status}`);
+    assert.deepEqual(
+      JSON.parse(dados.get('todolab:tarefas')),
+      [tarefa],
+      `deve persistir o status ${status}`,
+    );
+  }
+
+  for (const status of ['cancelado', '', 'EM-PROGRESSO', ' em-progresso ', null, 42]) {
+    const statusAnterior = tarefa.status;
+    const gravacoesAntes = gravacoes;
+    assert.throws(
+      () => store.atualizarStatus(tarefa.id, status),
+      (erro) => erro instanceof RangeError && /novo, em-progresso, em-revisao, concluido/.test(erro.message),
+      `deve rejeitar ${JSON.stringify(status)} e informar os valores permitidos`,
+    );
+    assert.equal(tarefa.status, statusAnterior, 'status inválido não deve substituir o válido');
+    assert.equal(gravacoes, gravacoesAntes, 'status inválido não deve ser persistido');
+  }
+
+  const gravacoesAntesDeIdInexistente = gravacoes;
+  assert.equal(store.atualizarStatus('id-inexistente', 'concluido'), null);
+  assert.equal(gravacoes, gravacoesAntesDeIdInexistente, 'tarefa inexistente não deve gravar alteração');
+}
+
+test('atualizarStatus aceita apenas os quatro valores permitidos', testarValidacaoDeStatus);
+
 export function testarEdicaoDeTarefa() {
   const dados = new Map();
   let gravacoes = 0;
