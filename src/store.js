@@ -3,6 +3,7 @@ const CHAVE = 'todolab:tarefas';
 function criarTarefa(titulo) {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    status: 'novo',
     titulo,
     concluida: false,
     criadaEm: new Date().toISOString(),
@@ -34,7 +35,14 @@ export class TodoStore {
         typeof tarefa.criadaEm === 'string' &&
         tarefa.criadaEm.length > 0,
       );
-      return tarefasValidas ? tarefas : [];
+      return tarefasValidas
+        ? tarefas.map((tarefa) => ({
+          ...tarefa,
+          status: typeof tarefa.status === 'string' && tarefa.status.length > 0
+            ? tarefa.status
+            : 'novo',
+        }))
+        : [];
     } catch {
       return [];
     }
