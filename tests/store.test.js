@@ -150,6 +150,58 @@ export function testarValidacaoDeStatus() {
 
 test('atualizarStatus aceita apenas os quatro valores permitidos', testarValidacaoDeStatus);
 
+export function testarPersistenciaDeStatus() {
+  const dados = new Map();
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const tarefa = store.adicionar('Tarefa com dados preservados');
+  tarefa.descricao = 'Descrição original';
+  store.atualizarStatus(tarefa.id, 'em-progresso');
+
+  for (const status of ['novo', 'em-progresso', 'em-revisao', 'concluido']) {
+    store.atualizarStatus(tarefa.id, status);
+    const tarefaSalva = JSON.parse(dados.get('todolab:tarefas'))[0];
+
+    assert.equal(tarefaSalva.status, status, `deve salvar o status ${status}`);
+    assert.equal(tarefaSalva.titulo, 'Tarefa com dados preservados');
+    assert.equal(tarefaSalva.descricao, 'Descrição original');
+    assert.equal(tarefaSalva.id, tarefa.id);
+    assert.equal(tarefaSalva.concluida, tarefa.concluida);
+    assert.equal(tarefaSalva.criadaEm, tarefa.criadaEm);
+
+    const storeRecarregada = new TodoStore(armazenamento);
+    assert.deepEqual(
+      storeRecarregada.listar(),
+      [tarefaSalva],
+      `deve recuperar status e demais dados após recarga (${status})`,
+    );
+  }
+
+  const tarefaAntiga = {
+    id: 'tarefa-antiga',
+    titulo: 'Tarefa legada',
+    descricao: 'Descrição legada',
+    concluida: false,
+    criadaEm: '2026-01-01T00:00:00.000Z',
+  };
+  dados.set('todolab:tarefas', JSON.stringify([tarefaAntiga]));
+
+  assert.deepEqual(
+    new TodoStore(armazenamento).listar(),
+    [{ ...tarefaAntiga, status: 'novo' }],
+    'deve carregar tarefa legada sem erro e atribuir status novo',
+  );
+}
+
+test('status e demais dados persistem após recarga e tarefas legadas são carregadas', testarPersistenciaDeStatus);
+
 export function testarEdicaoDeTarefa() {
   const dados = new Map();
   let gravacoes = 0;
