@@ -5,7 +5,7 @@ const ETAPAS = [
   { titulo: 'Concluído', status: 'concluido' },
 ];
 
-export function renderizarColunasKanban(container) {
+export function renderizarColunasKanban(container, tarefas = []) {
   const documento = container.ownerDocument;
   const colunas = ETAPAS.map(({ titulo, status }) => {
     const coluna = documento.createElement('section');
@@ -16,7 +16,20 @@ export function renderizarColunasKanban(container) {
     const cabecalho = documento.createElement('h3');
     cabecalho.className = 'kanban-column__title';
     cabecalho.textContent = titulo;
-    coluna.append(cabecalho);
+    const lista = documento.createElement('ul');
+    lista.className = 'kanban-column__tasks';
+    lista.setAttribute('aria-label', `Tarefas: ${titulo}`);
+
+    for (const tarefa of tarefas) {
+      if (tarefa.status !== status) continue;
+      const item = documento.createElement('li');
+      item.className = 'kanban-card';
+      item.dataset.id = tarefa.id;
+      item.textContent = tarefa.titulo;
+      lista.append(item);
+    }
+
+    coluna.append(cabecalho, lista);
 
     return coluna;
   });

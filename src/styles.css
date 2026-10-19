@@ -76,6 +76,8 @@ h1 span { color: var(--acid); font-style: italic; }
 .kanban-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .kanban-column { min-height: 240px; padding: 18px; border: 1px solid var(--line); background: rgb(25 28 25 / 88%); }
 .kanban-column__title { margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); color: var(--acid); font-size: .85rem; text-transform: uppercase; }
+.kanban-column__tasks { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }
+.kanban-card { padding: 12px; border: 1px solid var(--line); color: var(--ink); font-size: .78rem; overflow-wrap: anywhere; }
 
 .composer { display: grid; grid-template-columns: 1fr auto; padding: 26px; border-bottom: 1px solid var(--line); }
 input, button { font: inherit; }
