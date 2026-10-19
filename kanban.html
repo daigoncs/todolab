@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Quadro Kanban do TodoLab." />
+    <title>TodoLab — Quadro Kanban</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <main class="shell kanban-shell">
+      <header class="masthead">
+        <p class="eyebrow"><span>USJT</span> Gestão &amp; Qualidade</p>
+        <h1>Todo<span>Lab</span></h1>
+        <p class="thesis">Quadro Kanban · fluxo de trabalho</p>
+        <a class="kanban-link" href="./index.html">Voltar às tarefas</a>
+      </header>
+
+      <section aria-labelledby="kanban-title">
+        <h2 id="kanban-title" class="kanban-title">Etapas do fluxo</h2>
+        <div id="kanban-board" class="kanban-board" aria-label="Colunas do quadro Kanban"></div>
+      </section>
+    </main>
+    <script type="module">
+      import { renderizarColunasKanban } from './src/kanban.js';
+
+      renderizarColunasKanban(document.querySelector('#kanban-board'));
+    </script>
+  </body>
+</html>
