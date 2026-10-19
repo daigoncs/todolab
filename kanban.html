@@ -23,9 +23,11 @@
       </section>
     </main>
     <script type="module">
+      import { TodoStore } from './src/store.js';
       import { renderizarColunasKanban } from './src/kanban.js';
 
-      renderizarColunasKanban(document.querySelector('#kanban-board'));
+      const store = new TodoStore();
+      renderizarColunasKanban(document.querySelector('#kanban-board'), store.listar());
     </script>
   </body>
 </html>
