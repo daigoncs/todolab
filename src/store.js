@@ -1,8 +1,10 @@
 const CHAVE = 'todolab:tarefas';
+const STATUS_VALIDOS = ['novo', 'em-progresso', 'em-revisao', 'concluido'];
 
 function criarTarefa(titulo) {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    status: 'novo',
     titulo,
     concluida: false,
     criadaEm: new Date().toISOString(),
@@ -34,7 +36,14 @@ export class TodoStore {
         typeof tarefa.criadaEm === 'string' &&
         tarefa.criadaEm.length > 0,
       );
-      return tarefasValidas ? tarefas : [];
+      return tarefasValidas
+        ? tarefas.map((tarefa) => ({
+          ...tarefa,
+          status: typeof tarefa.status === 'string' && tarefa.status.length > 0
+            ? tarefa.status
+            : 'novo',
+        }))
+        : [];
     } catch {
       return [];
     }
@@ -80,6 +89,18 @@ export class TodoStore {
     if (!tarefa) return null;
     if (tarefa.titulo === tituloTratado) return tarefa;
     tarefa.titulo = tituloTratado;
+    this.salvar();
+    return tarefa;
+  }
+
+  atualizarStatus(id, status) {
+    if (!STATUS_VALIDOS.includes(status)) {
+      throw new RangeError(`Status inválido. Valores permitidos: ${STATUS_VALIDOS.join(', ')}.`);
+    }
+    const tarefa = this.tarefas.find((item) => item.id === id);
+    if (!tarefa) return null;
+    if (tarefa.status === status) return tarefa;
+    tarefa.status = status;
     this.salvar();
     return tarefa;
   }

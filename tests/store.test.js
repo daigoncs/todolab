@@ -44,6 +44,112 @@ export function testarAdicionarTarefa() {
 
 test('adicionar rejeita títulos vazios e normaliza títulos válidos', testarAdicionarTarefa);
 
+export function testarStatusPadraoDaTarefa() {
+  const dados = new Map();
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+    },
+  };
+  const store = new TodoStore(armazenamento);
+
+  const tarefa = store.adicionar('  tarefa com status  ');
+  assert.equal(tarefa.status, 'novo', 'nova tarefa deve receber o status padrão');
+  assert.equal(tarefa.titulo, 'tarefa com status', 'o título deve permanecer normalizado');
+  assert.equal(tarefa.concluida, false, 'o estado de conclusão deve ser preservado');
+  assert.equal(typeof tarefa.id, 'string', 'o identificador deve continuar presente');
+  assert.ok(tarefa.criadaEm, 'a data de criação deve continuar presente');
+  assert.deepEqual(store.listar(), [tarefa], 'a tarefa deve continuar disponível para exibição');
+  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa], 'o status deve ser persistido');
+  assert.deepEqual(
+    new TodoStore(armazenamento).listar(),
+    [tarefa],
+    'status e demais campos devem permanecer após recarga',
+  );
+
+  const tarefaLegada = {
+    id: 'legada-1',
+    titulo: 'Tarefa antiga',
+    concluida: true,
+    criadaEm: '2026-01-01T00:00:00.000Z',
+    metadado: 'preservado',
+  };
+  dados.set('todolab:tarefas', JSON.stringify([tarefaLegada]));
+  const storeComTarefaLegada = new TodoStore(armazenamento);
+  assert.deepEqual(storeComTarefaLegada.listar(), [{
+    ...tarefaLegada,
+    status: 'novo',
+  }], 'tarefa legada deve receber status sem perder dados existentes');
+  assert.deepEqual(
+    storeComTarefaLegada.filtrar('all'),
+    storeComTarefaLegada.listar(),
+    'tarefas com status devem continuar listáveis',
+  );
+
+  const tarefaComStatus = { ...tarefaLegada, status: 'em andamento' };
+  dados.set('todolab:tarefas', JSON.stringify([tarefaComStatus]));
+  assert.deepEqual(
+    new TodoStore(armazenamento).listar(),
+    [tarefaComStatus],
+    'um status já existente deve ser preservado',
+  );
+
+  for (const titulo of ['', '   ', null, 42]) {
+    const antes = store.listar();
+    assert.equal(store.adicionar(titulo), null, 'entrada inválida não deve criar tarefa');
+    assert.deepEqual(store.listar(), antes, 'entrada inválida não deve alterar a lista');
+  }
+}
+
+test('tarefas recebem status padrão sem perder dados ou interromper a listagem', testarStatusPadraoDaTarefa);
+
+export function testarValidacaoDeStatus() {
+  const dados = new Map();
+  let gravacoes = 0;
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+      gravacoes += 1;
+    },
+  };
+  const store = new TodoStore(armazenamento);
+  const tarefa = store.adicionar('Validar status');
+
+  for (const status of ['novo', 'em-progresso', 'em-revisao', 'concluido']) {
+    assert.equal(store.atualizarStatus(tarefa.id, status), tarefa, `deve aceitar ${status}`);
+    assert.equal(tarefa.status, status, `deve definir ${status}`);
+    assert.deepEqual(
+      JSON.parse(dados.get('todolab:tarefas')),
+      [tarefa],
+      `deve persistir o status ${status}`,
+    );
+  }
+
+  for (const status of ['cancelado', '', 'EM-PROGRESSO', ' em-progresso ', null, 42]) {
+    const statusAnterior = tarefa.status;
+    const gravacoesAntes = gravacoes;
+    assert.throws(
+      () => store.atualizarStatus(tarefa.id, status),
+      (erro) => erro instanceof RangeError && /novo, em-progresso, em-revisao, concluido/.test(erro.message),
+      `deve rejeitar ${JSON.stringify(status)} e informar os valores permitidos`,
+    );
+    assert.equal(tarefa.status, statusAnterior, 'status inválido não deve substituir o válido');
+    assert.equal(gravacoes, gravacoesAntes, 'status inválido não deve ser persistido');
+  }
+
+  const gravacoesAntesDeIdInexistente = gravacoes;
+  assert.equal(store.atualizarStatus('id-inexistente', 'concluido'), null);
+  assert.equal(gravacoes, gravacoesAntesDeIdInexistente, 'tarefa inexistente não deve gravar alteração');
+}
+
+test('atualizarStatus aceita apenas os quatro valores permitidos', testarValidacaoDeStatus);
+
 export function testarEdicaoDeTarefa() {
   const dados = new Map();
   let gravacoes = 0;
