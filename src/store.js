@@ -50,10 +50,13 @@ export class TodoStore {
   }
 
   salvar() {
-    if (!this.armazenamento) return;
+    if (!this.armazenamento) return true;
     try {
       this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   listar() {
@@ -73,7 +76,7 @@ export class TodoStore {
     const tarefa = criarTarefa(tituloTratado);
     this.tarefas.push(tarefa);
     try {
-      this.salvar();
+      if (!this.salvar()) throw new Error('Falha ao salvar tarefa.');
     } catch (erro) {
       this.tarefas.pop();
       throw erro;

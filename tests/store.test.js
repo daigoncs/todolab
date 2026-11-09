@@ -38,7 +38,7 @@ export function testarAdicionarTarefa() {
     },
   };
   const storeComFalha = new TodoStore(armazenamentoComFalha);
-  assert.throws(() => storeComFalha.adicionar('não perder este texto'), /falha simulada/);
+  assert.throws(() => storeComFalha.adicionar('não perder este texto'), /Falha ao salvar tarefa/);
   assert.deepEqual(storeComFalha.listar(), [], 'falha ao salvar deve desfazer a inclusão na memória');
 }
 
