@@ -11,6 +11,32 @@ function criarTarefa(titulo) {
   };
 }
 
+function executarAlteracao(store, alterar) {
+  const listaAnterior = store.tarefas;
+  const tarefasAnteriores = listaAnterior.map((tarefa) => ({
+    tarefa,
+    valores: { ...tarefa },
+  }));
+
+  try {
+    const resultado = alterar();
+    store.salvar();
+    return resultado;
+  } catch (erro) {
+    for (const { tarefa, valores } of tarefasAnteriores) {
+      for (const chave of Object.keys(tarefa)) {
+        if (!Object.prototype.hasOwnProperty.call(valores, chave)) {
+          delete tarefa[chave];
+        }
+      }
+      Object.assign(tarefa, valores);
+    }
+    store.tarefas = listaAnterior;
+    listaAnterior.splice(0, listaAnterior.length, ...tarefasAnteriores.map(({ tarefa }) => tarefa));
+    throw erro;
+  }
+}
+
 export class TodoStore {
   constructor(armazenamento = globalThis.localStorage) {
     this.armazenamento = armazenamento;
@@ -51,9 +77,7 @@ export class TodoStore {
 
   salvar() {
     if (!this.armazenamento) return;
-    try {
-      this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
-    } catch {}
+    this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
   }
 
   listar() {
@@ -71,14 +95,10 @@ export class TodoStore {
     const tituloTratado = titulo.trim();
     if (!tituloTratado) return null;
     const tarefa = criarTarefa(tituloTratado);
-    this.tarefas.push(tarefa);
-    try {
-      this.salvar();
-    } catch (erro) {
-      this.tarefas.pop();
-      throw erro;
-    }
-    return tarefa;
+    return executarAlteracao(this, () => {
+      this.tarefas.push(tarefa);
+      return tarefa;
+    });
   }
 
   editar(id, titulo) {
@@ -88,9 +108,10 @@ export class TodoStore {
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return null;
     if (tarefa.titulo === tituloTratado) return tarefa;
-    tarefa.titulo = tituloTratado;
-    this.salvar();
-    return tarefa;
+    return executarAlteracao(this, () => {
+      tarefa.titulo = tituloTratado;
+      return tarefa;
+    });
   }
 
   atualizarStatus(id, status) {
@@ -100,40 +121,45 @@ export class TodoStore {
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return null;
     if (tarefa.status === status) return tarefa;
-    tarefa.status = status;
-    this.salvar();
-    return tarefa;
+    return executarAlteracao(this, () => {
+      tarefa.status = status;
+      return tarefa;
+    });
   }
 
   alternar(id) {
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return;
-    tarefa.concluida = !tarefa.concluida;
-    this.salvar();
+    executarAlteracao(this, () => {
+      tarefa.concluida = !tarefa.concluida;
+    });
   }
 
   alternarTodas() {
     if (this.tarefas.length === 0) return;
     const marcarComoConcluidas = !this.tarefas.every((tarefa) => tarefa.concluida);
-    for (const tarefa of this.tarefas) {
-      tarefa.concluida = marcarComoConcluidas;
-    }
-    this.salvar();
+    executarAlteracao(this, () => {
+      for (const tarefa of this.tarefas) {
+        tarefa.concluida = marcarComoConcluidas;
+      }
+    });
   }
 
   limparConcluidas() {
     const tarefasPendentes = this.tarefas.filter((tarefa) => !tarefa.concluida);
     const removidas = this.tarefas.length - tarefasPendentes.length;
     if (removidas === 0) return 0;
-    this.tarefas = tarefasPendentes;
-    this.salvar();
-    return removidas;
+    return executarAlteracao(this, () => {
+      this.tarefas = tarefasPendentes;
+      return removidas;
+    });
   }
 
   remover(id) {
     const indice = this.tarefas.findIndex((tarefa) => tarefa.id === id);
     if (indice === -1) return;
-    this.tarefas.splice(indice, 1);
-    this.salvar();
+    executarAlteracao(this, () => {
+      this.tarefas.splice(indice, 1);
+    });
   }
 }
