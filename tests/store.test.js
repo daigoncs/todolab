@@ -405,3 +405,77 @@ export function testarFiltrarTarefas() {
 }
 
 test('filtrar mostra todas, ativas ou concluídas sem alterar a lista', testarFiltrarTarefas);
+
+export function testarCarregamentoComDadosInvalidos() {
+  const entradasInvalidas = [
+    '',
+    '{json inválido',
+    JSON.stringify({ id: 'não-é-lista' }),
+    JSON.stringify([null]),
+    JSON.stringify([{
+      id: 'sem-título',
+      concluida: false,
+      criadaEm: '2026-01-01T00:00:00.000Z',
+    }]),
+  ];
+
+  for (const entrada of entradasInvalidas) {
+    const armazenamento = {
+      getItem() {
+        return entrada;
+      },
+    };
+
+    assert.deepEqual(
+      new TodoStore(armazenamento).listar(),
+      [],
+      `dados inválidos devem carregar como lista vazia: ${JSON.stringify(entrada)}`,
+    );
+  }
+
+  const armazenamentoComFalha = {
+    getItem() {
+      throw new Error('falha simulada de leitura');
+    },
+  };
+  assert.deepEqual(
+    new TodoStore(armazenamentoComFalha).listar(),
+    [],
+    'falha ao ler o armazenamento deve carregar uma lista vazia',
+  );
+}
+
+test('carregar ignora dados persistidos inválidos e falhas de leitura', testarCarregamentoComDadosInvalidos);
+
+export function testarOperacoesSemArmazenamento() {
+  const store = new TodoStore(null);
+  assert.deepEqual(store.listar(), [], 'deve iniciar vazio sem armazenamento');
+
+  const tarefa = store.adicionar('Tarefa sem persistência');
+  assert.equal(tarefa.titulo, 'Tarefa sem persistência');
+  assert.equal(store.editar(tarefa.id, 'Título atualizado'), tarefa);
+  assert.equal(tarefa.titulo, 'Título atualizado');
+  assert.equal(store.atualizarStatus(tarefa.id, 'em-progresso'), tarefa);
+  assert.equal(tarefa.status, 'em-progresso');
+  store.alternar(tarefa.id);
+  assert.equal(tarefa.concluida, true);
+
+  store.remover(tarefa.id);
+  assert.deepEqual(store.listar(), [], 'deve permitir remover tarefas sem armazenamento');
+}
+
+test('operações do store funcionam sem armazenamento persistente', testarOperacoesSemArmazenamento);
+
+export function testarListarRetornaCopiaDaLista() {
+  const store = new TodoStore(null);
+  const tarefa = store.adicionar('Tarefa preservada');
+  const resultado = store.listar();
+
+  assert.notEqual(resultado, store.tarefas, 'deve devolver uma nova lista');
+  resultado.pop();
+  resultado.push({ id: 'externa' });
+
+  assert.deepEqual(store.listar(), [tarefa], 'alterar a lista retornada não deve alterar o store');
+}
+
+test('listar protege a lista interna contra alterações no array retornado', testarListarRetornaCopiaDaLista);
