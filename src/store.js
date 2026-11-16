@@ -103,8 +103,14 @@ export class TodoStore {
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return null;
     if (tarefa.status === status) return tarefa;
+    const statusAnterior = tarefa.status;
     tarefa.status = status;
-    this.salvar();
+    try {
+      if (!this.salvar()) throw new Error('Falha ao salvar status da tarefa.');
+    } catch (erro) {
+      tarefa.status = statusAnterior;
+      throw erro;
+    }
     return tarefa;
   }
 
