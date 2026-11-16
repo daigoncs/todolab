@@ -37,12 +37,13 @@ export class TodoStore {
         tarefa.criadaEm.length > 0,
       );
       return tarefasValidas
-        ? tarefas.map((tarefa) => ({
-          ...tarefa,
-          status: typeof tarefa.status === 'string' && tarefa.status.length > 0
-            ? tarefa.status
-            : 'novo',
-        }))
+        ? tarefas.map((tarefa) => {
+          const statusSalvo = typeof tarefa.status === 'string' ? tarefa.status.trim() : '';
+          return {
+            ...tarefa,
+            status: statusSalvo || 'novo',
+          };
+        })
         : [];
     } catch {
       return [];
