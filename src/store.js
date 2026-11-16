@@ -76,7 +76,9 @@ export class TodoStore {
   }
 
   salvar() {
-    if (!this.armazenamento) return;
+    if (!this.armazenamento) {
+      throw new Error('Armazenamento indisponível.');
+    }
     this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
   }
 
