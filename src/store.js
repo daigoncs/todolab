@@ -63,12 +63,13 @@ export class TodoStore {
         tarefa.criadaEm.length > 0,
       );
       return tarefasValidas
-        ? tarefas.map((tarefa) => ({
-          ...tarefa,
-          status: typeof tarefa.status === 'string' && tarefa.status.length > 0
-            ? tarefa.status
-            : 'novo',
-        }))
+        ? tarefas.map((tarefa) => {
+          const statusSalvo = typeof tarefa.status === 'string' ? tarefa.status.trim() : '';
+          return {
+            ...tarefa,
+            status: statusSalvo || 'novo',
+          };
+        })
         : [];
     } catch {
       return [];
@@ -76,10 +77,13 @@ export class TodoStore {
   }
 
   salvar() {
-    if (!this.armazenamento) {
-      throw new Error('Armazenamento indisponível.');
+    if (!this.armazenamento) return true;
+    try {
+      this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
+      return true;
+    } catch {
+      return false;
     }
-    this.armazenamento.setItem(CHAVE, JSON.stringify(this.tarefas));
   }
 
   listar() {
@@ -97,10 +101,14 @@ export class TodoStore {
     const tituloTratado = titulo.trim();
     if (!tituloTratado) return null;
     const tarefa = criarTarefa(tituloTratado);
-    return executarAlteracao(this, () => {
-      this.tarefas.push(tarefa);
-      return tarefa;
-    });
+    this.tarefas.push(tarefa);
+    try {
+      if (!this.salvar()) throw new Error('Falha ao salvar tarefa.');
+    } catch (erro) {
+      this.tarefas.pop();
+      throw erro;
+    }
+    return tarefa;
   }
 
   editar(id, titulo) {
@@ -123,10 +131,15 @@ export class TodoStore {
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return null;
     if (tarefa.status === status) return tarefa;
-    return executarAlteracao(this, () => {
-      tarefa.status = status;
-      return tarefa;
-    });
+    const statusAnterior = tarefa.status;
+    tarefa.status = status;
+    try {
+      if (!this.salvar()) throw new Error('Falha ao salvar status da tarefa.');
+    } catch (erro) {
+      tarefa.status = statusAnterior;
+      throw erro;
+    }
+    return tarefa;
   }
 
   alternar(id) {
