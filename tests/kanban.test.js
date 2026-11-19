@@ -122,3 +122,112 @@ export function testarTarefasNasColunasDoStatus() {
 }
 
 test('tarefas aparecem nas colunas pelo status atual e persistido', testarTarefasNasColunasDoStatus);
+
+for (const comTarefas of [false, true]) {
+  test(
+    `Issue #25: preservar dados ao renderizar e recarregar ${
+      comTarefas ? 'com tarefas' : 'sem tarefas'
+    }`,
+    () => {
+      const dados = new Map();
+      let gravacoes = 0;
+
+      const armazenamento = {
+        getItem(chave) {
+          return dados.get(chave) ?? null;
+        },
+
+        setItem(chave, valor) {
+          gravacoes += 1;
+          dados.set(chave, valor);
+        },
+      };
+
+      const documento = {
+        createElement(tagName) {
+          return new ElementoFalso(tagName, documento);
+        },
+      };
+
+      const container = new ElementoFalso('div', documento);
+      const store = new TodoStore(armazenamento);
+
+      if (comTarefas) {
+        const status = [
+          'novo',
+          'em-progresso',
+          'em-revisao',
+          'concluido',
+        ];
+
+        status.forEach((valor, indice) => {
+          const tarefa = store.adicionar(`Tarefa ${indice + 1}`);
+
+          store.atualizarStatus(tarefa.id, valor);
+
+          if (indice % 2 === 1) {
+            store.alternar(tarefa.id);
+          }
+        });
+      }
+
+      // Entrada inválida não deve criar uma tarefa.
+      const antesDaEntradaInvalida = JSON.stringify(store.listar());
+
+      assert.equal(store.adicionar('   '), null);
+      assert.equal(
+        JSON.stringify(store.listar()),
+        antesDaEntradaInvalida,
+        'uma entrada composta por espaços não deve alterar as tarefas',
+      );
+
+      // Captura independente de todos os campos antes das leituras.
+      const tarefasAntes = JSON.parse(JSON.stringify(store.listar()));
+      const armazenamentoAntes = [...dados.entries()];
+      const gravacoesAntes = gravacoes;
+
+      for (let ciclo = 0; ciclo < 3; ciclo += 1) {
+        const storeKanban = new TodoStore(armazenamento);
+
+        renderizarColunasKanban(container, storeKanban.listar());
+
+        assert.deepEqual(
+          storeKanban.listar(),
+          tarefasAntes,
+          'renderizar o Kanban não deve alterar nenhum campo das tarefas',
+        );
+
+        const totalRenderizado = container.children.reduce(
+          (total, coluna) => total + coluna.children[1].children.length,
+          0,
+        );
+
+        assert.equal(
+          totalRenderizado,
+          tarefasAntes.length,
+          'renderizações repetidas não devem omitir ou duplicar tarefas',
+        );
+
+        const storePrincipal = new TodoStore(armazenamento);
+
+        assert.deepEqual(
+          storePrincipal.listar(),
+          tarefasAntes,
+          'recarregar o armazenamento deve preservar todos os dados',
+        );
+      }
+
+      assert.deepEqual(
+        [...dados.entries()],
+        armazenamentoAntes,
+        'as leituras e renderizações não devem modificar os dados salvos',
+      );
+
+      assert.equal(
+        gravacoes,
+        gravacoesAntes,
+        'as leituras e renderizações não devem provocar novas gravações',
+      );
+    },
+  );
+}
