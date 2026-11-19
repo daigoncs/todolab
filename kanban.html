@@ -22,12 +22,25 @@
         <div id="kanban-board" class="kanban-board" aria-label="Colunas do quadro Kanban"></div>
       </section>
     </main>
-    <script type="module">
-      import { TodoStore } from './src/store.js';
-      import { renderizarColunasKanban } from './src/kanban.js';
+<script type="module">
+  import { TodoStore } from './src/store.js';
+  import { renderizarColunasKanban } from './src/kanban.js';
 
-      const store = new TodoStore();
-      renderizarColunasKanban(document.querySelector('#kanban-board'), store.listar());
-    </script>
+  const store = new TodoStore();
+  const quadro = document.querySelector('#kanban-board');
+
+  function renderizar() {
+    renderizarColunasKanban(
+      quadro,
+      store.listar(),
+      (id, novoStatus) => {
+        store.atualizarStatus(id, novoStatus);
+        renderizar();
+      },
+    );
+  }
+
+  renderizar();
+</script>
   </body>
 </html>
