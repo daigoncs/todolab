@@ -1,11 +1,44 @@
-const CHAVE = 'todolab:tarefas';
-const STATUS_VALIDOS = ['novo', 'em-progresso', 'em-revisao', 'concluido'];
+const CHAVE = "todolab:tarefas";
+const STATUS_VALIDOS = ["novo", "em-progresso", "em-revisao", "concluido"];
+const PRIORIDADES_VALIDAS = ["baixa", "media", "média", "alta"];
 
-function criarTarefa(titulo) {
+function normalizarPrioridade(prioridade) {
+  if (typeof prioridade !== "string") return "média";
+  const valor = prioridade.trim().toLowerCase();
+  if (!PRIORIDADES_VALIDAS.includes(valor)) return "média";
+  return valor === "media" ? "média" : valor;
+}
+
+function normalizarPrazo(prazo) {
+  if (typeof prazo !== "string") return null;
+  const valor = prazo.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
+  const [ano, mes, dia] = valor.split("-").map(Number);
+  const data = new Date(Date.UTC(ano, mes - 1, dia));
+  if (
+    data.getUTCFullYear() !== ano ||
+    data.getUTCMonth() !== mes - 1 ||
+    data.getUTCDate() !== dia
+  )
+    return null;
+  return valor;
+}
+
+function criarTarefa(titulo, prioridade = "média", prazo = null) {
+  if (
+    prioridade &&
+    typeof prioridade === "object" &&
+    !Array.isArray(prioridade)
+  ) {
+    prazo = prioridade.prazo ?? prioridade.deadline ?? null;
+    prioridade = prioridade.prioridade ?? "média";
+  }
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
-    status: 'novo',
+    status: "novo",
     titulo,
+    prioridade: normalizarPrioridade(prioridade),
+    prazo: normalizarPrazo(prazo),
     concluida: false,
     criadaEm: new Date().toISOString(),
   };
@@ -32,7 +65,11 @@ function executarAlteracao(store, alterar) {
       Object.assign(tarefa, valores);
     }
     store.tarefas = listaAnterior;
-    listaAnterior.splice(0, listaAnterior.length, ...tarefasAnteriores.map(({ tarefa }) => tarefa));
+    listaAnterior.splice(
+      0,
+      listaAnterior.length,
+      ...tarefasAnteriores.map(({ tarefa }) => tarefa),
+    );
     throw erro;
   }
 }
@@ -50,26 +87,30 @@ export class TodoStore {
       if (!bruto) return [];
       const tarefas = JSON.parse(bruto);
       if (!Array.isArray(tarefas)) return [];
-      const tarefasValidas = tarefas.every((tarefa) =>
-        tarefa &&
-        typeof tarefa === 'object' &&
-        !Array.isArray(tarefa) &&
-        typeof tarefa.id === 'string' &&
-        tarefa.id.length > 0 &&
-        typeof tarefa.titulo === 'string' &&
-        tarefa.titulo.trim().length > 0 &&
-        typeof tarefa.concluida === 'boolean' &&
-        typeof tarefa.criadaEm === 'string' &&
-        tarefa.criadaEm.length > 0,
+      const tarefasValidas = tarefas.every(
+        (tarefa) =>
+          tarefa &&
+          typeof tarefa === "object" &&
+          !Array.isArray(tarefa) &&
+          typeof tarefa.id === "string" &&
+          tarefa.id.length > 0 &&
+          typeof tarefa.titulo === "string" &&
+          tarefa.titulo.trim().length > 0 &&
+          typeof tarefa.concluida === "boolean" &&
+          typeof tarefa.criadaEm === "string" &&
+          tarefa.criadaEm.length > 0,
       );
       return tarefasValidas
         ? tarefas.map((tarefa) => {
-          const statusSalvo = typeof tarefa.status === 'string' ? tarefa.status.trim() : '';
-          return {
-            ...tarefa,
-            status: statusSalvo || 'novo',
-          };
-        })
+            const statusSalvo =
+              typeof tarefa.status === "string" ? tarefa.status.trim() : "";
+            return {
+              ...tarefa,
+              status: statusSalvo || "novo",
+              prioridade: normalizarPrioridade(tarefa.prioridade),
+              prazo: normalizarPrazo(tarefa.prazo),
+            };
+          })
         : [];
     } catch {
       return [];
@@ -90,20 +131,22 @@ export class TodoStore {
     return [...this.tarefas];
   }
 
-  filtrar(filtro = 'all') {
-    if (filtro === 'active') return this.tarefas.filter((tarefa) => !tarefa.concluida);
-    if (filtro === 'completed') return this.tarefas.filter((tarefa) => tarefa.concluida);
+  filtrar(filtro = "all") {
+    if (filtro === "active")
+      return this.tarefas.filter((tarefa) => !tarefa.concluida);
+    if (filtro === "completed")
+      return this.tarefas.filter((tarefa) => tarefa.concluida);
     return this.listar();
   }
 
-  adicionar(titulo) {
-    if (typeof titulo !== 'string') return null;
+  adicionar(titulo, prioridade = "média", prazo = null) {
+    if (typeof titulo !== "string") return null;
     const tituloTratado = titulo.trim();
     if (!tituloTratado) return null;
-    const tarefa = criarTarefa(tituloTratado);
+    const tarefa = criarTarefa(tituloTratado, prioridade, prazo);
     this.tarefas.push(tarefa);
     try {
-      if (!this.salvar()) throw new Error('Falha ao salvar tarefa.');
+      if (!this.salvar()) throw new Error("Falha ao salvar tarefa.");
     } catch (erro) {
       this.tarefas.pop();
       throw erro;
@@ -112,7 +155,7 @@ export class TodoStore {
   }
 
   editar(id, titulo) {
-    if (typeof titulo !== 'string') return null;
+    if (typeof titulo !== "string") return null;
     const tituloTratado = titulo.trim();
     if (!tituloTratado) return null;
     const tarefa = this.tarefas.find((item) => item.id === id);
@@ -126,7 +169,9 @@ export class TodoStore {
 
   atualizarStatus(id, status) {
     if (!STATUS_VALIDOS.includes(status)) {
-      throw new RangeError(`Status inválido. Valores permitidos: ${STATUS_VALIDOS.join(', ')}.`);
+      throw new RangeError(
+        `Status inválido. Valores permitidos: ${STATUS_VALIDOS.join(", ")}.`,
+      );
     }
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return null;
@@ -134,7 +179,7 @@ export class TodoStore {
     const statusAnterior = tarefa.status;
     tarefa.status = status;
     try {
-      if (!this.salvar()) throw new Error('Falha ao salvar status da tarefa.');
+      if (!this.salvar()) throw new Error("Falha ao salvar status da tarefa.");
     } catch (erro) {
       tarefa.status = statusAnterior;
       throw erro;
@@ -152,7 +197,9 @@ export class TodoStore {
 
   alternarTodas() {
     if (this.tarefas.length === 0) return;
-    const marcarComoConcluidas = !this.tarefas.every((tarefa) => tarefa.concluida);
+    const marcarComoConcluidas = !this.tarefas.every(
+      (tarefa) => tarefa.concluida,
+    );
     executarAlteracao(this, () => {
       for (const tarefa of this.tarefas) {
         tarefa.concluida = marcarComoConcluidas;
@@ -176,5 +223,28 @@ export class TodoStore {
     executarAlteracao(this, () => {
       this.tarefas.splice(indice, 1);
     });
+  }
+
+  estaAtrasada(tarefaOuId, hoje) {
+    const tarefa =
+      typeof tarefaOuId === "string"
+        ? this.tarefas.find((item) => item.id === tarefaOuId)
+        : tarefaOuId;
+    if (!tarefa || tarefa.concluida || !tarefa.prazo) return false;
+
+    let hojeISO;
+    if (typeof hoje === "string" && /^\d{4}-\d{2}-\d{2}$/.test(hoje)) {
+      hojeISO = hoje;
+    } else {
+      const agora =
+        hoje instanceof Date && !Number.isNaN(hoje.getTime())
+          ? hoje
+          : new Date();
+      const ano = agora.getFullYear();
+      const mes = String(agora.getMonth() + 1).padStart(2, "0");
+      const dia = String(agora.getDate()).padStart(2, "0");
+      hojeISO = `${ano}-${mes}-${dia}`;
+    }
+    return normalizarPrazo(tarefa.prazo) !== null && tarefa.prazo < hojeISO;
   }
 }
