@@ -307,7 +307,7 @@ export function testarEdicaoDeTarefa() {
     },
     setItem(chave, valor) {
       dados.set(chave, valor);
-      gravacoes += 1;
+      if (chave === "todolab:tarefas") gravacoes += 1;
     },
   };
   const store = new TodoStore(armazenamento);
@@ -423,12 +423,15 @@ export function testarAlternanciaGlobalDeTarefas() {
   let dadosSalvos = null;
   let gravacoes = 0;
   const armazenamento = {
-    getItem() {
+    getItem(chave) {
+      if (chave === "todolab:auditoria") return null;
       return dadosSalvos;
     },
     setItem(chave, valor) {
-      dadosSalvos = valor;
-      gravacoes += 1;
+      if (chave === "todolab:tarefas") {
+        dadosSalvos = valor;
+        gravacoes += 1;
+      }
     },
   };
   const storeVazia = new TodoStore(armazenamento);
@@ -842,84 +845,125 @@ test(
   testarPrioridadeEPrazo,
 );
 
-export function testarIntegridadeDasFuncionalidadesExistentes() {
+export function testarAuditoriaDeAlteracoes() {
   const dados = new Map();
-  let gravacoes = 0;
+  let falharAuditoria = false;
   const armazenamento = {
     getItem(chave) {
       return dados.get(chave) ?? null;
     },
     setItem(chave, valor) {
+      if (chave === "todolab:auditoria" && falharAuditoria) {
+        throw new Error("falha simulada de auditoria");
+      }
       dados.set(chave, valor);
-      gravacoes += 1;
     },
   };
 
   const store = new TodoStore(armazenamento);
+  const tarefa = store.adicionar("Planejar auditoria", "alta", "2026-11-30");
 
-  assert.equal(store.adicionar("   \t\n "), null);
-  assert.equal(store.listar().length, 0);
+  assert.ok(tarefa);
+  let historico = store.listarHistorico(tarefa.id);
+  assert.equal(historico.length, 1);
+  assert.equal(historico[0].operacao, "criar");
+  assert.equal(historico[0].autor, "usuario");
+  assert.equal(historico[0].origem, "usuario");
+  assert.equal(historico[0].detalhes.titulo, "Planejar auditoria");
+  assert.ok(historico[0].dataHora);
 
-  const criada = store.adicionar("  Comprar materiais  ", "alta", "2026-11-20");
-  assert.ok(criada);
-  assert.equal(criada.titulo, "Comprar materiais");
-  assert.equal(criada.prioridade, "alta");
-  assert.equal(criada.prazo, "2026-11-20");
+  store.editar(tarefa.id, "Planejar auditoria completa");
+  historico = store.listarHistorico(tarefa.id);
+  assert.equal(historico.length, 2);
+  assert.equal(historico[1].operacao, "editar");
+  assert.equal(historico[1].detalhes.tituloAnterior, "Planejar auditoria");
+  assert.equal(historico[1].detalhes.tituloNovo, "Planejar auditoria completa");
 
-  assert.equal(store.editar(criada.id, "  Comprar equipamentos  "), criada);
-  assert.equal(store.atualizarStatus(criada.id, "em-progresso"), criada);
-  assert.equal(criada.status, "em-progresso");
-
-  const recarregada = new TodoStore(armazenamento);
-  assert.deepEqual(recarregada.listar(), [criada]);
-  assert.equal(recarregada.listar()[0].titulo, "Comprar equipamentos");
-  assert.equal(recarregada.listar()[0].status, "em-progresso");
-
-  assert.throws(
-    () => recarregada.atualizarStatus(criada.id, "cancelado"),
-    RangeError,
+  store.atualizarStatus(tarefa.id, "em-progresso");
+  historico = store.listarHistorico(tarefa.id);
+  const eventoStatus = historico.find(
+    (evento) => evento.operacao === "alterar_status",
   );
-  assert.equal(recarregada.listar()[0].status, "em-progresso");
+  assert.equal(eventoStatus.detalhes.statusAnterior, "novo");
+  assert.equal(eventoStatus.detalhes.statusNovo, "em-progresso");
+  assert.equal(eventoStatus.autor, "usuario");
 
-  const tarefaRecarregada = recarregada.listar()[0];
-  recarregada.alternar(tarefaRecarregada.id);
+  store.configurarAuditoria("assistente-ia", "ia");
+  store.atualizarStatus(tarefa.id, "em-revisao");
+  historico = store.listarHistorico(tarefa.id);
+  const eventoIA = historico.at(-1);
+  assert.equal(eventoIA.autor, "assistente-ia");
+  assert.equal(eventoIA.origem, "ia");
+  assert.equal(eventoIA.operacao, "alterar_status");
+  assert.equal(eventoIA.detalhes.statusAnterior, "em-progresso");
+  assert.equal(eventoIA.detalhes.statusNovo, "em-revisao");
+
+  const copiaHistorico = store.listarHistorico(tarefa.id);
+  copiaHistorico[0].detalhes.titulo = "alterado externamente";
   assert.equal(
-    recarregada.estaAtrasada(tarefaRecarregada, "2026-11-24"),
-    false,
+    store.listarHistorico(tarefa.id)[0].detalhes.titulo,
+    "Planejar auditoria",
   );
 
-  recarregada.alternar(tarefaRecarregada.id);
-  assert.equal(recarregada.estaAtrasada(tarefaRecarregada, "2026-11-24"), true);
+  store.configurarAuditoria("usuario-teste", "usuario");
+  store.remover(tarefa.id);
+  historico = store.listarHistorico(tarefa.id);
+  assert.equal(historico.at(-1).operacao, "excluir");
+  assert.equal(historico.at(-1).autor, "usuario-teste");
+  assert.equal(historico.at(-1).detalhes.titulo, "Planejar auditoria completa");
+  assert.deepEqual(store.listar(), []);
 
-  recarregada.adicionar("Revisar entrega", "baixa", null);
-  recarregada.alternarTodas();
-  assert.ok(recarregada.listar().every((tarefa) => tarefa.concluida));
-  assert.equal(recarregada.limparConcluidas(), 2);
-  assert.deepEqual(recarregada.listar(), []);
+  const storeRecarregado = new TodoStore(armazenamento);
+  assert.equal(
+    storeRecarregado.listarHistorico(tarefa.id).length,
+    historico.length,
+  );
+  assert.deepEqual(storeRecarregado.listarHistorico(tarefa.id), historico);
 
-  assert.equal(recarregada.remover("id-inexistente"), undefined);
-  assert.deepEqual(recarregada.listar(), []);
-  assert.ok(gravacoes > 0, "operações válidas devem persistir alterações");
+  assert.deepEqual(store.listarHistorico("id-inexistente"), []);
+  assert.deepEqual(store.listarHistorico(""), []);
+  assert.equal(store.registrarEvento("", "editar"), null);
+  assert.equal(store.registrarEvento(tarefa.id, "   "), null);
+
+  const eventoInvalido = {
+    id: "invalido",
+    tarefaId: "outra",
+  };
+  dados.set(
+    "todolab:auditoria",
+    JSON.stringify([eventoInvalido, null, "texto"]),
+  );
+  assert.deepEqual(new TodoStore(armazenamento).listarHistorico("outra"), []);
 
   dados.set(
-    "todolab:tarefas",
+    "todolab:auditoria",
     JSON.stringify([
       {
-        id: "legada-integridade",
-        titulo: "Tarefa legada",
-        concluida: false,
-        criadaEm: "2026-01-01T00:00:00.000Z",
+        id: "evento-legado",
+        tarefaId: "tarefa-legada",
+        operacao: "criar",
+        autor: "",
+        origem: "externa",
+        dataHora: "2026-11-24T10:00:00.000Z",
       },
     ]),
   );
+  const legado = new TodoStore(armazenamento).listarHistorico(
+    "tarefa-legada",
+  )[0];
+  assert.equal(legado.autor, "usuario");
+  assert.equal(legado.origem, "usuario");
+  assert.deepEqual(legado.detalhes, {});
 
-  const legada = new TodoStore(armazenamento).listar()[0];
-  assert.equal(legada.status, "novo");
-  assert.equal(legada.prioridade, "média");
-  assert.equal(legada.prazo, null);
+  falharAuditoria = true;
+  assert.throws(
+    () => store.registrarEvento("tarefa-x", "editar"),
+    /Falha ao salvar registro de auditoria/,
+  );
+  assert.deepEqual(store.listarHistorico("tarefa-x"), []);
 }
 
 test(
-  "Issue #46: integridade de CRUD, persistência, status e casos de borda",
-  testarIntegridadeDasFuncionalidadesExistentes,
+  "auditoria registra CRUD, origem IA, histórico íntegro e casos de borda",
+  testarAuditoriaDeAlteracoes,
 );

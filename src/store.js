@@ -1,4 +1,5 @@
 const CHAVE = "todolab:tarefas";
+const CHAVE_AUDITORIA = "todolab:auditoria";
 const STATUS_VALIDOS = ["novo", "em-progresso", "em-revisao", "concluido"];
 const PRIORIDADES_VALIDAS = ["baixa", "media", "média", "alta"];
 
@@ -46,9 +47,9 @@ function criarTarefa(titulo, prioridade = "média", prazo = null) {
 
 function executarAlteracao(store, alterar) {
   const listaAnterior = store.tarefas;
-  const tarefasAnteriores = listaAnterior.map((tarefa) => ({
-    tarefa,
-    valores: { ...tarefa },
+  const eventosAnteriores = store.eventosAuditoria.map((evento) => ({
+    ...evento,
+    detalhes: { ...evento.detalhes },
   }));
 
   try {
@@ -70,6 +71,9 @@ function executarAlteracao(store, alterar) {
       listaAnterior.length,
       ...tarefasAnteriores.map(({ tarefa }) => tarefa),
     );
+    store.eventosAuditoria = eventosAnteriores;
+    store.salvar();
+    store.salvarAuditoria();
     throw erro;
   }
 }
@@ -78,6 +82,11 @@ export class TodoStore {
   constructor(armazenamento = globalThis.localStorage) {
     this.armazenamento = armazenamento;
     this.tarefas = this.carregar();
+    this.eventosAuditoria = this.carregarAuditoria();
+    this.contextoAuditoria = {
+      autor: "usuario",
+      origem: "usuario",
+    };
   }
 
   carregar() {
@@ -147,8 +156,14 @@ export class TodoStore {
     this.tarefas.push(tarefa);
     try {
       if (!this.salvar()) throw new Error("Falha ao salvar tarefa.");
+      this.registrarEvento(tarefa.id, "criar", {
+        titulo: tarefa.titulo,
+        prioridade: tarefa.prioridade,
+        prazo: tarefa.prazo,
+      });
     } catch (erro) {
       this.tarefas.pop();
+      this.salvar();
       throw erro;
     }
     return tarefa;
@@ -161,8 +176,13 @@ export class TodoStore {
     const tarefa = this.tarefas.find((item) => item.id === id);
     if (!tarefa) return null;
     if (tarefa.titulo === tituloTratado) return tarefa;
+    const tituloAnterior = tarefa.titulo;
     return executarAlteracao(this, () => {
       tarefa.titulo = tituloTratado;
+      this.registrarEvento(tarefa.id, "editar", {
+        tituloAnterior,
+        tituloNovo: tituloTratado,
+      });
       return tarefa;
     });
   }
@@ -177,11 +197,22 @@ export class TodoStore {
     if (!tarefa) return null;
     if (tarefa.status === status) return tarefa;
     const statusAnterior = tarefa.status;
+    const eventosAnteriores = this.eventosAuditoria.map((evento) => ({
+      ...evento,
+      detalhes: { ...evento.detalhes },
+    }));
     tarefa.status = status;
     try {
       if (!this.salvar()) throw new Error("Falha ao salvar status da tarefa.");
+      this.registrarEvento(tarefa.id, "alterar_status", {
+        statusAnterior,
+        statusNovo: status,
+      });
     } catch (erro) {
       tarefa.status = statusAnterior;
+      this.eventosAuditoria = eventosAnteriores;
+      this.salvar();
+      this.salvarAuditoria();
       throw erro;
     }
     return tarefa;
@@ -192,6 +223,9 @@ export class TodoStore {
     if (!tarefa) return;
     executarAlteracao(this, () => {
       tarefa.concluida = !tarefa.concluida;
+      this.registrarEvento(tarefa.id, "alterar_conclusao", {
+        concluida: tarefa.concluida,
+      });
     });
   }
 
@@ -203,6 +237,10 @@ export class TodoStore {
     executarAlteracao(this, () => {
       for (const tarefa of this.tarefas) {
         tarefa.concluida = marcarComoConcluidas;
+        this.registrarEvento(tarefa.id, "alterar_conclusao", {
+          concluida: marcarComoConcluidas,
+          origemOperacao: "alternar_todas",
+        });
       }
     });
   }
@@ -220,7 +258,14 @@ export class TodoStore {
   remover(id) {
     const indice = this.tarefas.findIndex((tarefa) => tarefa.id === id);
     if (indice === -1) return;
+    const tarefaRemovida = this.tarefas[indice];
     executarAlteracao(this, () => {
+      this.registrarEvento(tarefaRemovida.id, "excluir", {
+        titulo: tarefaRemovida.titulo,
+        status: tarefaRemovida.status,
+        prioridade: tarefaRemovida.prioridade,
+        prazo: tarefaRemovida.prazo,
+      });
       this.tarefas.splice(indice, 1);
     });
   }
@@ -247,4 +292,121 @@ export class TodoStore {
     }
     return normalizarPrazo(tarefa.prazo) !== null && tarefa.prazo < hojeISO;
   }
+
+  carregarAuditoria() {
+    if (!this.armazenamento) return [];
+    try {
+      const bruto = this.armazenamento.getItem(CHAVE_AUDITORIA);
+      if (!bruto) return [];
+      return normalizarEventos(JSON.parse(bruto));
+    } catch {
+      return [];
+    }
+  }
+
+  salvarAuditoria() {
+    if (!this.armazenamento) return true;
+    try {
+      this.armazenamento.setItem(
+        CHAVE_AUDITORIA,
+        JSON.stringify(this.eventosAuditoria),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  configurarAuditoria(autor = "usuario", origem = "usuario") {
+    this.contextoAuditoria = {
+      autor:
+        typeof autor === "string" && autor.trim() ? autor.trim() : "usuario",
+      origem: origem === "ia" ? "ia" : "usuario",
+    };
+  }
+
+  registrarEvento(tarefaId, operacao, detalhes = {}, contexto = null) {
+    if (
+      typeof tarefaId !== "string" ||
+      tarefaId.length === 0 ||
+      typeof operacao !== "string" ||
+      operacao.trim().length === 0
+    )
+      return null;
+
+    const contextoAtual =
+      contexto && typeof contexto === "object"
+        ? contexto
+        : this.contextoAuditoria;
+    const evento = criarEventoAuditoria(
+      tarefaId,
+      operacao.trim(),
+      contextoAtual.autor,
+      contextoAtual.origem,
+      detalhes,
+    );
+    this.eventosAuditoria.push(evento);
+    if (!this.salvarAuditoria()) {
+      this.eventosAuditoria.pop();
+      throw new Error("Falha ao salvar registro de auditoria.");
+    }
+    return evento;
+  }
+
+  listarHistorico(tarefaId) {
+    if (typeof tarefaId !== "string" || tarefaId.length === 0) return [];
+    return normalizarEventos(
+      this.eventosAuditoria.filter((evento) => evento.tarefaId === tarefaId),
+    ).map((evento) => ({ ...evento, detalhes: { ...evento.detalhes } }));
+  }
+}
+
+function criarEventoAuditoria(
+  tarefaId,
+  operacao,
+  autor = "usuario",
+  origem = "usuario",
+  detalhes = {},
+) {
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    tarefaId,
+    operacao,
+    autor: typeof autor === "string" && autor.trim() ? autor.trim() : "usuario",
+    origem: origem === "ia" ? "ia" : "usuario",
+    dataHora: new Date().toISOString(),
+    detalhes:
+      detalhes && typeof detalhes === "object" && !Array.isArray(detalhes)
+        ? { ...detalhes }
+        : {},
+  };
+}
+
+function normalizarEventos(eventos) {
+  if (!Array.isArray(eventos)) return [];
+  return eventos
+    .filter(
+      (evento) =>
+        evento &&
+        typeof evento === "object" &&
+        typeof evento.id === "string" &&
+        typeof evento.tarefaId === "string" &&
+        typeof evento.operacao === "string" &&
+        typeof evento.dataHora === "string",
+    )
+    .map((evento) => ({
+      ...evento,
+      autor:
+        typeof evento.autor === "string" && evento.autor.trim()
+          ? evento.autor.trim()
+          : "usuario",
+      origem: evento.origem === "ia" ? "ia" : "usuario",
+      detalhes:
+        evento.detalhes &&
+        typeof evento.detalhes === "object" &&
+        !Array.isArray(evento.detalhes)
+          ? { ...evento.detalhes }
+          : {},
+    }))
+    .sort((a, b) => a.dataHora.localeCompare(b.dataHora));
 }
