@@ -841,3 +841,85 @@ test(
   "prioridade e prazo atendem criação, padrões, persistência, atraso e bordas",
   testarPrioridadeEPrazo,
 );
+
+export function testarIntegridadeDasFuncionalidadesExistentes() {
+  const dados = new Map();
+  let gravacoes = 0;
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+      gravacoes += 1;
+    },
+  };
+
+  const store = new TodoStore(armazenamento);
+
+  assert.equal(store.adicionar("   \t\n "), null);
+  assert.equal(store.listar().length, 0);
+
+  const criada = store.adicionar("  Comprar materiais  ", "alta", "2026-11-20");
+  assert.ok(criada);
+  assert.equal(criada.titulo, "Comprar materiais");
+  assert.equal(criada.prioridade, "alta");
+  assert.equal(criada.prazo, "2026-11-20");
+
+  assert.equal(store.editar(criada.id, "  Comprar equipamentos  "), criada);
+  assert.equal(store.atualizarStatus(criada.id, "em-progresso"), criada);
+  assert.equal(criada.status, "em-progresso");
+
+  const recarregada = new TodoStore(armazenamento);
+  assert.deepEqual(recarregada.listar(), [criada]);
+  assert.equal(recarregada.listar()[0].titulo, "Comprar equipamentos");
+  assert.equal(recarregada.listar()[0].status, "em-progresso");
+
+  assert.throws(
+    () => recarregada.atualizarStatus(criada.id, "cancelado"),
+    RangeError,
+  );
+  assert.equal(recarregada.listar()[0].status, "em-progresso");
+
+  const tarefaRecarregada = recarregada.listar()[0];
+  recarregada.alternar(tarefaRecarregada.id);
+  assert.equal(
+    recarregada.estaAtrasada(tarefaRecarregada, "2026-11-24"),
+    false,
+  );
+
+  recarregada.alternar(tarefaRecarregada.id);
+  assert.equal(recarregada.estaAtrasada(tarefaRecarregada, "2026-11-24"), true);
+
+  recarregada.adicionar("Revisar entrega", "baixa", null);
+  recarregada.alternarTodas();
+  assert.ok(recarregada.listar().every((tarefa) => tarefa.concluida));
+  assert.equal(recarregada.limparConcluidas(), 2);
+  assert.deepEqual(recarregada.listar(), []);
+
+  assert.equal(recarregada.remover("id-inexistente"), undefined);
+  assert.deepEqual(recarregada.listar(), []);
+  assert.ok(gravacoes > 0, "operações válidas devem persistir alterações");
+
+  dados.set(
+    "todolab:tarefas",
+    JSON.stringify([
+      {
+        id: "legada-integridade",
+        titulo: "Tarefa legada",
+        concluida: false,
+        criadaEm: "2026-01-01T00:00:00.000Z",
+      },
+    ]),
+  );
+
+  const legada = new TodoStore(armazenamento).listar()[0];
+  assert.equal(legada.status, "novo");
+  assert.equal(legada.prioridade, "média");
+  assert.equal(legada.prazo, null);
+}
+
+test(
+  "Issue #46: integridade de CRUD, persistência, status e casos de borda",
+  testarIntegridadeDasFuncionalidadesExistentes,
+);
