@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="TodoLab: produto didático para a disciplina de Gestão e Qualidade de Software." />
+    <meta
+      name="description"
+      content="TodoLab: produto didático para a disciplina de Gestão e Qualidade de Software."
+    />
     <title>TodoLab</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
@@ -13,7 +16,9 @@
       <header class="masthead">
         <p class="eyebrow"><span>USJT</span> Gestão &amp; Qualidade</p>
         <h1>Todo<span>Lab</span></h1>
-        <p class="thesis">Código que roda ainda não é evidência de qualidade.</p>
+        <p class="thesis">
+          Código que roda ainda não é evidência de qualidade.
+        </p>
         <a class="kanban-link" href="./kanban.html">Abrir quadro Kanban</a>
       </header>
 
@@ -31,12 +36,40 @@
 
         <form id="todo-form" class="composer">
           <label class="sr-only" for="todo-input">Nova tarefa</label>
-          <input id="todo-input" name="title" autocomplete="off" aria-describedby="form-feedback" placeholder="O que precisa ser feito?" />
+          <input
+            id="todo-input"
+            name="title"
+            autocomplete="off"
+            aria-describedby="form-feedback"
+            placeholder="O que precisa ser feito?"
+          />
+          <label class="sr-only" for="todo-priority">Prioridade</label>
+          <select id="todo-priority" name="priority" aria-label="Prioridade">
+            <option value="baixa">Baixa</option>
+            <option value="media" selected>Média</option>
+            <option value="alta">Alta</option>
+          </select>
+          <label class="sr-only" for="todo-deadline">Prazo</label>
+          <input
+            id="todo-deadline"
+            name="deadline"
+            type="date"
+            aria-label="Prazo"
+          />
           <button type="submit">Adicionar</button>
         </form>
-        <p id="form-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        <p
+          id="form-feedback"
+          class="form-feedback"
+          role="status"
+          aria-live="polite"
+        ></p>
 
-        <nav id="todo-filters" class="todo-filters" aria-label="Filtrar tarefas">
+        <nav
+          id="todo-filters"
+          class="todo-filters"
+          aria-label="Filtrar tarefas"
+        >
           <a href="#/" data-filter="all">Todas</a>
           <a href="#/active" data-filter="active">O que falta</a>
           <a href="#/completed" data-filter="completed">Concluídas</a>
@@ -50,8 +83,17 @@
         <ul id="todo-list" class="todo-list" aria-live="polite"></ul>
 
         <footer class="workbench__footer">
-          <p id="empty-state">Nenhuma tarefa ainda. Comece com um critério claro.</p>
-          <button id="clear-completed" class="clear-completed" type="button" disabled>Limpar concluídas</button>
+          <p id="empty-state">
+            Nenhuma tarefa ainda. Comece com um critério claro.
+          </p>
+          <button
+            id="clear-completed"
+            class="clear-completed"
+            type="button"
+            disabled
+          >
+            Limpar concluídas
+          </button>
           <p class="build-mark">build 0.1 · legado inicial</p>
         </footer>
       </section>
@@ -66,6 +108,5 @@
     </main>
 
     <script type="module" src="./src/app.js"></script>
-
   </body>
 </html>

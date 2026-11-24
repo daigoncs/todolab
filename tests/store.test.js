@@ -1,6 +1,6 @@
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { TodoStore } from '../src/store.js';
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { TodoStore } from "../src/store.js";
 
 export function testarAdicionarTarefa() {
   const dados = new Map();
@@ -14,35 +14,57 @@ export function testarAdicionarTarefa() {
   };
   const store = new TodoStore(armazenamento);
 
-  for (const titulo of ['', '   ', '\t\t', ' \t\n ']) {
+  for (const titulo of ["", "   ", "\t\t", " \t\n "]) {
     const antes = store.listar();
-    const persistidoAntes = dados.get('todolab:tarefas');
+    const persistidoAntes = dados.get("todolab:tarefas");
 
-    assert.equal(store.adicionar(titulo), null, `deve rejeitar ${JSON.stringify(titulo)}`);
-    assert.deepEqual(store.listar(), antes, 'a lista não deve ser alterada');
-    assert.equal(dados.get('todolab:tarefas'), persistidoAntes, 'não deve persistir uma tarefa inválida');
+    assert.equal(
+      store.adicionar(titulo),
+      null,
+      `deve rejeitar ${JSON.stringify(titulo)}`,
+    );
+    assert.deepEqual(store.listar(), antes, "a lista não deve ser alterada");
+    assert.equal(
+      dados.get("todolab:tarefas"),
+      persistidoAntes,
+      "não deve persistir uma tarefa inválida",
+    );
   }
 
-  const tarefa = store.adicionar('  revisar requisitos\t ');
-  assert.ok(tarefa, 'deve criar tarefa com conteúdo válido');
-  assert.equal(tarefa.titulo, 'revisar requisitos', 'deve remover espaços externos');
+  const tarefa = store.adicionar("  revisar requisitos\t ");
+  assert.ok(tarefa, "deve criar tarefa com conteúdo válido");
+  assert.equal(
+    tarefa.titulo,
+    "revisar requisitos",
+    "deve remover espaços externos",
+  );
   assert.deepEqual(store.listar(), [tarefa]);
-  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa]);
+  assert.deepEqual(JSON.parse(dados.get("todolab:tarefas")), [tarefa]);
 
   const armazenamentoComFalha = {
     getItem() {
       return null;
     },
     setItem() {
-      throw new Error('falha simulada de persistência');
+      throw new Error("falha simulada de persistência");
     },
   };
   const storeComFalha = new TodoStore(armazenamentoComFalha);
-  assert.throws(() => storeComFalha.adicionar('não perder este texto'), /Falha ao salvar tarefa/);
-  assert.deepEqual(storeComFalha.listar(), [], 'falha ao salvar deve desfazer a inclusão na memória');
+  assert.throws(
+    () => storeComFalha.adicionar("não perder este texto"),
+    /Falha ao salvar tarefa/,
+  );
+  assert.deepEqual(
+    storeComFalha.listar(),
+    [],
+    "falha ao salvar deve desfazer a inclusão na memória",
+  );
 }
 
-test('adicionar rejeita títulos vazios e normaliza títulos válidos', testarAdicionarTarefa);
+test(
+  "adicionar rejeita títulos vazios e normaliza títulos válidos",
+  testarAdicionarTarefa,
+);
 
 export function testarStatusPadraoDaTarefa() {
   const dados = new Map();
@@ -56,55 +78,98 @@ export function testarStatusPadraoDaTarefa() {
   };
   const store = new TodoStore(armazenamento);
 
-  const tarefa = store.adicionar('  tarefa com status  ');
-  assert.equal(tarefa.status, 'novo', 'nova tarefa deve receber o status padrão');
-  assert.equal(tarefa.titulo, 'tarefa com status', 'o título deve permanecer normalizado');
-  assert.equal(tarefa.concluida, false, 'o estado de conclusão deve ser preservado');
-  assert.equal(typeof tarefa.id, 'string', 'o identificador deve continuar presente');
-  assert.ok(tarefa.criadaEm, 'a data de criação deve continuar presente');
-  assert.deepEqual(store.listar(), [tarefa], 'a tarefa deve continuar disponível para exibição');
-  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa], 'o status deve ser persistido');
+  const tarefa = store.adicionar("  tarefa com status  ");
+  assert.equal(
+    tarefa.status,
+    "novo",
+    "nova tarefa deve receber o status padrão",
+  );
+  assert.equal(
+    tarefa.titulo,
+    "tarefa com status",
+    "o título deve permanecer normalizado",
+  );
+  assert.equal(
+    tarefa.concluida,
+    false,
+    "o estado de conclusão deve ser preservado",
+  );
+  assert.equal(
+    typeof tarefa.id,
+    "string",
+    "o identificador deve continuar presente",
+  );
+  assert.ok(tarefa.criadaEm, "a data de criação deve continuar presente");
+  assert.deepEqual(
+    store.listar(),
+    [tarefa],
+    "a tarefa deve continuar disponível para exibição",
+  );
+  assert.deepEqual(
+    JSON.parse(dados.get("todolab:tarefas")),
+    [tarefa],
+    "o status deve ser persistido",
+  );
   assert.deepEqual(
     new TodoStore(armazenamento).listar(),
     [tarefa],
-    'status e demais campos devem permanecer após recarga',
+    "status e demais campos devem permanecer após recarga",
   );
 
   const tarefaLegada = {
-    id: 'legada-1',
-    titulo: 'Tarefa antiga',
+    id: "legada-1",
+    titulo: "Tarefa antiga",
     concluida: true,
-    criadaEm: '2026-01-01T00:00:00.000Z',
-    metadado: 'preservado',
+    criadaEm: "2026-01-01T00:00:00.000Z",
+    metadado: "preservado",
   };
-  dados.set('todolab:tarefas', JSON.stringify([tarefaLegada]));
+  dados.set("todolab:tarefas", JSON.stringify([tarefaLegada]));
   const storeComTarefaLegada = new TodoStore(armazenamento);
-  assert.deepEqual(storeComTarefaLegada.listar(), [{
-    ...tarefaLegada,
-    status: 'novo',
-  }], 'tarefa legada deve receber status sem perder dados existentes');
   assert.deepEqual(
-    storeComTarefaLegada.filtrar('all'),
     storeComTarefaLegada.listar(),
-    'tarefas com status devem continuar listáveis',
+    [
+      {
+        ...tarefaLegada,
+        status: "novo",
+        prioridade: "média",
+        prazo: null,
+      },
+    ],
+    "tarefa legada deve receber status sem perder dados existentes",
+  );
+  assert.deepEqual(
+    storeComTarefaLegada.filtrar("all"),
+    storeComTarefaLegada.listar(),
+    "tarefas com status devem continuar listáveis",
   );
 
-  const tarefaComStatus = { ...tarefaLegada, status: 'em andamento' };
-  dados.set('todolab:tarefas', JSON.stringify([tarefaComStatus]));
+  const tarefaComStatus = { ...tarefaLegada, status: "em andamento" };
+  dados.set("todolab:tarefas", JSON.stringify([tarefaComStatus]));
   assert.deepEqual(
     new TodoStore(armazenamento).listar(),
-    [tarefaComStatus],
-    'um status já existente deve ser preservado',
+    [{ ...tarefaComStatus, prioridade: "média", prazo: null }],
+    "um status já existente deve ser preservado",
   );
 
-  for (const titulo of ['', '   ', null, 42]) {
+  for (const titulo of ["", "   ", null, 42]) {
     const antes = store.listar();
-    assert.equal(store.adicionar(titulo), null, 'entrada inválida não deve criar tarefa');
-    assert.deepEqual(store.listar(), antes, 'entrada inválida não deve alterar a lista');
+    assert.equal(
+      store.adicionar(titulo),
+      null,
+      "entrada inválida não deve criar tarefa",
+    );
+    assert.deepEqual(
+      store.listar(),
+      antes,
+      "entrada inválida não deve alterar a lista",
+    );
   }
 }
 
-test('tarefas recebem status padrão sem perder dados ou interromper a listagem', testarStatusPadraoDaTarefa);
+test(
+  "tarefas recebem status padrão sem perder dados ou interromper a listagem",
+  testarStatusPadraoDaTarefa,
+);
 
 export function testarValidacaoDeStatus() {
   const dados = new Map();
@@ -119,36 +184,64 @@ export function testarValidacaoDeStatus() {
     },
   };
   const store = new TodoStore(armazenamento);
-  const tarefa = store.adicionar('Validar status');
+  const tarefa = store.adicionar("Validar status");
 
-  for (const status of ['novo', 'em-progresso', 'em-revisao', 'concluido']) {
-    assert.equal(store.atualizarStatus(tarefa.id, status), tarefa, `deve aceitar ${status}`);
+  for (const status of ["novo", "em-progresso", "em-revisao", "concluido"]) {
+    assert.equal(
+      store.atualizarStatus(tarefa.id, status),
+      tarefa,
+      `deve aceitar ${status}`,
+    );
     assert.equal(tarefa.status, status, `deve definir ${status}`);
     assert.deepEqual(
-      JSON.parse(dados.get('todolab:tarefas')),
+      JSON.parse(dados.get("todolab:tarefas")),
       [tarefa],
       `deve persistir o status ${status}`,
     );
   }
 
-  for (const status of ['cancelado', '', 'EM-PROGRESSO', ' em-progresso ', null, 42]) {
+  for (const status of [
+    "cancelado",
+    "",
+    "EM-PROGRESSO",
+    " em-progresso ",
+    null,
+    42,
+  ]) {
     const statusAnterior = tarefa.status;
     const gravacoesAntes = gravacoes;
     assert.throws(
       () => store.atualizarStatus(tarefa.id, status),
-      (erro) => erro instanceof RangeError && /novo, em-progresso, em-revisao, concluido/.test(erro.message),
+      (erro) =>
+        erro instanceof RangeError &&
+        /novo, em-progresso, em-revisao, concluido/.test(erro.message),
       `deve rejeitar ${JSON.stringify(status)} e informar os valores permitidos`,
     );
-    assert.equal(tarefa.status, statusAnterior, 'status inválido não deve substituir o válido');
-    assert.equal(gravacoes, gravacoesAntes, 'status inválido não deve ser persistido');
+    assert.equal(
+      tarefa.status,
+      statusAnterior,
+      "status inválido não deve substituir o válido",
+    );
+    assert.equal(
+      gravacoes,
+      gravacoesAntes,
+      "status inválido não deve ser persistido",
+    );
   }
 
   const gravacoesAntesDeIdInexistente = gravacoes;
-  assert.equal(store.atualizarStatus('id-inexistente', 'concluido'), null);
-  assert.equal(gravacoes, gravacoesAntesDeIdInexistente, 'tarefa inexistente não deve gravar alteração');
+  assert.equal(store.atualizarStatus("id-inexistente", "concluido"), null);
+  assert.equal(
+    gravacoes,
+    gravacoesAntesDeIdInexistente,
+    "tarefa inexistente não deve gravar alteração",
+  );
 }
 
-test('atualizarStatus aceita apenas os quatro valores permitidos', testarValidacaoDeStatus);
+test(
+  "atualizarStatus aceita apenas os quatro valores permitidos",
+  testarValidacaoDeStatus,
+);
 
 export function testarPersistenciaDeStatus() {
   const dados = new Map();
@@ -161,17 +254,17 @@ export function testarPersistenciaDeStatus() {
     },
   };
   const store = new TodoStore(armazenamento);
-  const tarefa = store.adicionar('Tarefa com dados preservados');
-  tarefa.descricao = 'Descrição original';
-  store.atualizarStatus(tarefa.id, 'em-progresso');
+  const tarefa = store.adicionar("Tarefa com dados preservados");
+  tarefa.descricao = "Descrição original";
+  store.atualizarStatus(tarefa.id, "em-progresso");
 
-  for (const status of ['novo', 'em-progresso', 'em-revisao', 'concluido']) {
+  for (const status of ["novo", "em-progresso", "em-revisao", "concluido"]) {
     store.atualizarStatus(tarefa.id, status);
-    const tarefaSalva = JSON.parse(dados.get('todolab:tarefas'))[0];
+    const tarefaSalva = JSON.parse(dados.get("todolab:tarefas"))[0];
 
     assert.equal(tarefaSalva.status, status, `deve salvar o status ${status}`);
-    assert.equal(tarefaSalva.titulo, 'Tarefa com dados preservados');
-    assert.equal(tarefaSalva.descricao, 'Descrição original');
+    assert.equal(tarefaSalva.titulo, "Tarefa com dados preservados");
+    assert.equal(tarefaSalva.descricao, "Descrição original");
     assert.equal(tarefaSalva.id, tarefa.id);
     assert.equal(tarefaSalva.concluida, tarefa.concluida);
     assert.equal(tarefaSalva.criadaEm, tarefa.criadaEm);
@@ -185,22 +278,25 @@ export function testarPersistenciaDeStatus() {
   }
 
   const tarefaAntiga = {
-    id: 'tarefa-antiga',
-    titulo: 'Tarefa legada',
-    descricao: 'Descrição legada',
+    id: "tarefa-antiga",
+    titulo: "Tarefa legada",
+    descricao: "Descrição legada",
     concluida: false,
-    criadaEm: '2026-01-01T00:00:00.000Z',
+    criadaEm: "2026-01-01T00:00:00.000Z",
   };
-  dados.set('todolab:tarefas', JSON.stringify([tarefaAntiga]));
+  dados.set("todolab:tarefas", JSON.stringify([tarefaAntiga]));
 
   assert.deepEqual(
     new TodoStore(armazenamento).listar(),
-    [{ ...tarefaAntiga, status: 'novo' }],
-    'deve carregar tarefa legada sem erro e atribuir status novo',
+    [{ ...tarefaAntiga, status: "novo", prioridade: "média", prazo: null }],
+    "deve carregar tarefa legada sem erro e atribuir status novo",
   );
 }
 
-test('status e demais dados persistem após recarga e tarefas legadas são carregadas', testarPersistenciaDeStatus);
+test(
+  "status e demais dados persistem após recarga e tarefas legadas são carregadas",
+  testarPersistenciaDeStatus,
+);
 
 export function testarEdicaoDeTarefa() {
   const dados = new Map();
@@ -215,34 +311,69 @@ export function testarEdicaoDeTarefa() {
     },
   };
   const store = new TodoStore(armazenamento);
-  const tarefa = store.adicionar('Título original');
+  const tarefa = store.adicionar("Título original");
   const gravacoesAntesDaEdicao = gravacoes;
 
-  const atualizada = store.editar(tarefa.id, '  Título corrigido\t ');
-  assert.equal(atualizada, tarefa, 'deve atualizar a tarefa identificada');
-  assert.equal(tarefa.titulo, 'Título corrigido', 'deve remover espaços externos do novo título');
-  assert.equal(gravacoes, gravacoesAntesDaEdicao + 1, 'deve persistir a alteração válida');
-  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [tarefa]);
-  assert.deepEqual(new TodoStore(armazenamento).listar(), [tarefa], 'a edição deve persistir após recarga');
+  const atualizada = store.editar(tarefa.id, "  Título corrigido\t ");
+  assert.equal(atualizada, tarefa, "deve atualizar a tarefa identificada");
+  assert.equal(
+    tarefa.titulo,
+    "Título corrigido",
+    "deve remover espaços externos do novo título",
+  );
+  assert.equal(
+    gravacoes,
+    gravacoesAntesDaEdicao + 1,
+    "deve persistir a alteração válida",
+  );
+  assert.deepEqual(JSON.parse(dados.get("todolab:tarefas")), [tarefa]);
+  assert.deepEqual(
+    new TodoStore(armazenamento).listar(),
+    [tarefa],
+    "a edição deve persistir após recarga",
+  );
 
-  for (const titulo of ['', '   ', '\t\n ', null, 42]) {
+  for (const titulo of ["", "   ", "\t\n ", null, 42]) {
     const tituloAntes = tarefa.titulo;
     const gravacoesAntes = gravacoes;
-    assert.equal(store.editar(tarefa.id, titulo), null, `deve rejeitar ${JSON.stringify(titulo)}`);
-    assert.equal(tarefa.titulo, tituloAntes, 'entrada inválida deve manter o texto anterior');
-    assert.equal(gravacoes, gravacoesAntes, 'entrada inválida não deve persistir');
+    assert.equal(
+      store.editar(tarefa.id, titulo),
+      null,
+      `deve rejeitar ${JSON.stringify(titulo)}`,
+    );
+    assert.equal(
+      tarefa.titulo,
+      tituloAntes,
+      "entrada inválida deve manter o texto anterior",
+    );
+    assert.equal(
+      gravacoes,
+      gravacoesAntes,
+      "entrada inválida não deve persistir",
+    );
   }
 
   const gravacoesAntesDeIdInexistente = gravacoes;
-  assert.equal(store.editar('id-inexistente', 'Outro título'), null);
-  assert.equal(gravacoes, gravacoesAntesDeIdInexistente, 'ID inexistente não deve persistir');
+  assert.equal(store.editar("id-inexistente", "Outro título"), null);
+  assert.equal(
+    gravacoes,
+    gravacoesAntesDeIdInexistente,
+    "ID inexistente não deve persistir",
+  );
 
   const gravacoesAntesDoMesmoTitulo = gravacoes;
-  assert.equal(store.editar(tarefa.id, ' Título corrigido '), tarefa);
-  assert.equal(gravacoes, gravacoesAntesDoMesmoTitulo, 'mesmo título normalizado não precisa ser gravado novamente');
+  assert.equal(store.editar(tarefa.id, " Título corrigido "), tarefa);
+  assert.equal(
+    gravacoes,
+    gravacoesAntesDoMesmoTitulo,
+    "mesmo título normalizado não precisa ser gravado novamente",
+  );
 }
 
-test('editar atualiza e persiste títulos válidos sem perder o original em entradas inválidas', testarEdicaoDeTarefa);
+test(
+  "editar atualiza e persiste títulos válidos sem perder o original em entradas inválidas",
+  testarEdicaoDeTarefa,
+);
 
 export function testarRemocaoDeTarefas() {
   const dados = new Map();
@@ -255,19 +386,38 @@ export function testarRemocaoDeTarefas() {
     },
   };
   const store = new TodoStore(armazenamento);
-  const primeira = store.adicionar('Primeira tarefa');
-  const segunda = store.adicionar('Segunda tarefa');
+  const primeira = store.adicionar("Primeira tarefa");
+  const segunda = store.adicionar("Segunda tarefa");
 
   store.remover(primeira.id);
-  assert.deepEqual(store.listar(), [segunda], 'deve remover somente a tarefa selecionada');
-  assert.deepEqual(JSON.parse(dados.get('todolab:tarefas')), [segunda], 'deve persistir a remoção');
-  assert.deepEqual(new TodoStore(armazenamento).listar(), [segunda], 'remoção deve persistir após recarga');
+  assert.deepEqual(
+    store.listar(),
+    [segunda],
+    "deve remover somente a tarefa selecionada",
+  );
+  assert.deepEqual(
+    JSON.parse(dados.get("todolab:tarefas")),
+    [segunda],
+    "deve persistir a remoção",
+  );
+  assert.deepEqual(
+    new TodoStore(armazenamento).listar(),
+    [segunda],
+    "remoção deve persistir após recarga",
+  );
 
-  store.remover('id-inexistente');
-  assert.deepEqual(store.listar(), [segunda], 'id inexistente não deve alterar a lista');
+  store.remover("id-inexistente");
+  assert.deepEqual(
+    store.listar(),
+    [segunda],
+    "id inexistente não deve alterar a lista",
+  );
 }
 
-test('remover exclui a tarefa correta e mantém o resultado após recarga', testarRemocaoDeTarefas);
+test(
+  "remover exclui a tarefa correta e mantém o resultado após recarga",
+  testarRemocaoDeTarefas,
+);
 
 export function testarAlternanciaGlobalDeTarefas() {
   let dadosSalvos = null;
@@ -284,27 +434,52 @@ export function testarAlternanciaGlobalDeTarefas() {
   const storeVazia = new TodoStore(armazenamento);
 
   storeVazia.alternarTodas();
-  assert.deepEqual(storeVazia.listar(), [], 'lista vazia deve continuar sem tarefas');
-  assert.equal(gravacoes, 0, 'lista vazia não deve gravar no armazenamento');
+  assert.deepEqual(
+    storeVazia.listar(),
+    [],
+    "lista vazia deve continuar sem tarefas",
+  );
+  assert.equal(gravacoes, 0, "lista vazia não deve gravar no armazenamento");
 
   const store = new TodoStore(armazenamento);
-  const primeira = store.adicionar('Tarefa 1');
-  const segunda = store.adicionar('Tarefa 2');
-  const terceira = store.adicionar('Tarefa 3');
+  const primeira = store.adicionar("Tarefa 1");
+  const segunda = store.adicionar("Tarefa 2");
+  const terceira = store.adicionar("Tarefa 3");
   store.alternar(segunda.id);
   const gravacoesAntesDaAlternancia = gravacoes;
 
   store.alternarTodas();
-  assert.ok(store.listar().every((tarefa) => tarefa.concluida), 'lista mista deve ficar toda concluída');
-  assert.equal(gravacoes, gravacoesAntesDaAlternancia + 1, 'deve persistir a alternância em uma gravação');
-  assert.deepEqual(JSON.parse(dadosSalvos), store.listar(), 'deve persistir todas as tarefas concluídas');
+  assert.ok(
+    store.listar().every((tarefa) => tarefa.concluida),
+    "lista mista deve ficar toda concluída",
+  );
+  assert.equal(
+    gravacoes,
+    gravacoesAntesDaAlternancia + 1,
+    "deve persistir a alternância em uma gravação",
+  );
+  assert.deepEqual(
+    JSON.parse(dadosSalvos),
+    store.listar(),
+    "deve persistir todas as tarefas concluídas",
+  );
 
   const storeAposRecarga = new TodoStore(armazenamento);
-  assert.ok(storeAposRecarga.listar().every((tarefa) => tarefa.concluida), 'estado concluído deve persistir após recarga');
+  assert.ok(
+    storeAposRecarga.listar().every((tarefa) => tarefa.concluida),
+    "estado concluído deve persistir após recarga",
+  );
 
   storeAposRecarga.alternarTodas();
-  assert.ok(storeAposRecarga.listar().every((tarefa) => !tarefa.concluida), 'lista toda concluída deve voltar a pendente');
-  assert.deepEqual(JSON.parse(dadosSalvos), storeAposRecarga.listar(), 'deve persistir todas as tarefas pendentes');
+  assert.ok(
+    storeAposRecarga.listar().every((tarefa) => !tarefa.concluida),
+    "lista toda concluída deve voltar a pendente",
+  );
+  assert.deepEqual(
+    JSON.parse(dadosSalvos),
+    storeAposRecarga.listar(),
+    "deve persistir todas as tarefas pendentes",
+  );
 
   let dadosUnitarios = null;
   const armazenamentoUnitario = {
@@ -316,15 +491,26 @@ export function testarAlternanciaGlobalDeTarefas() {
     },
   };
   const storeUnitario = new TodoStore(armazenamentoUnitario);
-  const tarefaUnica = storeUnitario.adicionar('Tarefa única');
+  const tarefaUnica = storeUnitario.adicionar("Tarefa única");
   storeUnitario.alternarTodas();
-  assert.equal(storeUnitario.listar()[0].concluida, true, 'deve concluir uma lista com uma tarefa');
+  assert.equal(
+    storeUnitario.listar()[0].concluida,
+    true,
+    "deve concluir uma lista com uma tarefa",
+  );
   storeUnitario.alternarTodas();
-  assert.equal(storeUnitario.listar()[0].concluida, false, 'deve reabrir uma lista com uma tarefa');
+  assert.equal(
+    storeUnitario.listar()[0].concluida,
+    false,
+    "deve reabrir uma lista com uma tarefa",
+  );
   assert.equal(storeUnitario.listar()[0].id, tarefaUnica.id);
 }
 
-test('alternarTodas conclui listas mistas e reabre listas concluídas com persistência', testarAlternanciaGlobalDeTarefas);
+test(
+  "alternarTodas conclui listas mistas e reabre listas concluídas com persistência",
+  testarAlternanciaGlobalDeTarefas,
+);
 
 export function testarLimparTarefasConcluidas() {
   let dadosSalvos = null;
@@ -339,28 +525,68 @@ export function testarLimparTarefasConcluidas() {
     },
   };
   const store = new TodoStore(armazenamento);
-  const primeira = store.adicionar('Concluída 1');
-  const pendente = store.adicionar('Pendente');
-  const segunda = store.adicionar('Concluída 2');
+  const primeira = store.adicionar("Concluída 1");
+  const pendente = store.adicionar("Pendente");
+  const segunda = store.adicionar("Concluída 2");
   store.alternar(primeira.id);
   store.alternar(segunda.id);
 
-  assert.equal(store.limparConcluidas(), 2, 'deve retornar a quantidade de tarefas removidas');
-  assert.deepEqual(store.listar(), [pendente], 'deve manter somente as tarefas pendentes');
-  assert.deepEqual(JSON.parse(dadosSalvos), [pendente], 'deve persistir somente as pendentes');
-  assert.deepEqual(new TodoStore(armazenamento).listar(), [pendente], 'o resultado deve persistir após recarga');
+  assert.equal(
+    store.limparConcluidas(),
+    2,
+    "deve retornar a quantidade de tarefas removidas",
+  );
+  assert.deepEqual(
+    store.listar(),
+    [pendente],
+    "deve manter somente as tarefas pendentes",
+  );
+  assert.deepEqual(
+    JSON.parse(dadosSalvos),
+    [pendente],
+    "deve persistir somente as pendentes",
+  );
+  assert.deepEqual(
+    new TodoStore(armazenamento).listar(),
+    [pendente],
+    "o resultado deve persistir após recarga",
+  );
 
   const gravacoesAposLimpeza = gravacoes;
-  assert.equal(store.limparConcluidas(), 0, 'sem tarefas concluídas, não deve remover nada');
-  assert.equal(gravacoes, gravacoesAposLimpeza, 'sem remoções, não deve gravar no armazenamento');
+  assert.equal(
+    store.limparConcluidas(),
+    0,
+    "sem tarefas concluídas, não deve remover nada",
+  );
+  assert.equal(
+    gravacoes,
+    gravacoesAposLimpeza,
+    "sem remoções, não deve gravar no armazenamento",
+  );
 
   const storeVazia = new TodoStore(armazenamentoSemDados());
-  assert.equal(storeVazia.limparConcluidas(), 0, 'lista vazia deve continuar sem tarefas');
+  assert.equal(
+    storeVazia.limparConcluidas(),
+    0,
+    "lista vazia deve continuar sem tarefas",
+  );
 
   store.alternar(pendente.id);
-  assert.equal(store.limparConcluidas(), 1, 'deve remover a tarefa quando todas estão concluídas');
-  assert.deepEqual(store.listar(), [], 'todas concluídas devem resultar em lista vazia');
-  assert.deepEqual(JSON.parse(dadosSalvos), [], 'lista vazia deve ser persistida');
+  assert.equal(
+    store.limparConcluidas(),
+    1,
+    "deve remover a tarefa quando todas estão concluídas",
+  );
+  assert.deepEqual(
+    store.listar(),
+    [],
+    "todas concluídas devem resultar em lista vazia",
+  );
+  assert.deepEqual(
+    JSON.parse(dadosSalvos),
+    [],
+    "lista vazia deve ser persistida",
+  );
 }
 
 function armazenamentoSemDados() {
@@ -369,12 +595,15 @@ function armazenamentoSemDados() {
       return null;
     },
     setItem() {
-      assert.fail('lista vazia não deve persistir alterações');
+      assert.fail("lista vazia não deve persistir alterações");
     },
   };
 }
 
-test('limparConcluidas remove apenas concluídas e preserva/persiste as pendentes', testarLimparTarefasConcluidas);
+test(
+  "limparConcluidas remove apenas concluídas e preserva/persiste as pendentes",
+  testarLimparTarefasConcluidas,
+);
 
 export function testarFiltrarTarefas() {
   const dados = new Map();
@@ -387,36 +616,49 @@ export function testarFiltrarTarefas() {
     },
   };
   const store = new TodoStore(armazenamento);
-  const primeiraAtiva = store.adicionar('Ativa 1');
-  const concluida = store.adicionar('Concluída');
-  const segundaAtiva = store.adicionar('Ativa 2');
+  const primeiraAtiva = store.adicionar("Ativa 1");
+  const concluida = store.adicionar("Concluída");
+  const segundaAtiva = store.adicionar("Ativa 2");
   store.alternar(concluida.id);
 
-  assert.deepEqual(store.filtrar('all'), [primeiraAtiva, concluida, segundaAtiva]);
-  assert.deepEqual(store.filtrar('active'), [primeiraAtiva, segundaAtiva]);
-  assert.deepEqual(store.filtrar('completed'), [concluida]);
-  assert.deepEqual(store.filtrar('invalid-filter'), [primeiraAtiva, concluida, segundaAtiva]);
+  assert.deepEqual(store.filtrar("all"), [
+    primeiraAtiva,
+    concluida,
+    segundaAtiva,
+  ]);
+  assert.deepEqual(store.filtrar("active"), [primeiraAtiva, segundaAtiva]);
+  assert.deepEqual(store.filtrar("completed"), [concluida]);
+  assert.deepEqual(store.filtrar("invalid-filter"), [
+    primeiraAtiva,
+    concluida,
+    segundaAtiva,
+  ]);
   assert.deepEqual(store.listar(), [primeiraAtiva, concluida, segundaAtiva]);
 
   const storeVazia = new TodoStore({ getItem: () => null, setItem() {} });
-  assert.deepEqual(storeVazia.filtrar('all'), []);
-  assert.deepEqual(storeVazia.filtrar('active'), []);
-  assert.deepEqual(storeVazia.filtrar('completed'), []);
+  assert.deepEqual(storeVazia.filtrar("all"), []);
+  assert.deepEqual(storeVazia.filtrar("active"), []);
+  assert.deepEqual(storeVazia.filtrar("completed"), []);
 }
 
-test('filtrar mostra todas, ativas ou concluídas sem alterar a lista', testarFiltrarTarefas);
+test(
+  "filtrar mostra todas, ativas ou concluídas sem alterar a lista",
+  testarFiltrarTarefas,
+);
 
 export function testarCarregamentoComDadosInvalidos() {
   const entradasInvalidas = [
-    '',
-    '{json inválido',
-    JSON.stringify({ id: 'não-é-lista' }),
+    "",
+    "{json inválido",
+    JSON.stringify({ id: "não-é-lista" }),
     JSON.stringify([null]),
-    JSON.stringify([{
-      id: 'sem-título',
-      concluida: false,
-      criadaEm: '2026-01-01T00:00:00.000Z',
-    }]),
+    JSON.stringify([
+      {
+        id: "sem-título",
+        concluida: false,
+        criadaEm: "2026-01-01T00:00:00.000Z",
+      },
+    ]),
   ];
 
   for (const entrada of entradasInvalidas) {
@@ -435,47 +677,167 @@ export function testarCarregamentoComDadosInvalidos() {
 
   const armazenamentoComFalha = {
     getItem() {
-      throw new Error('falha simulada de leitura');
+      throw new Error("falha simulada de leitura");
     },
   };
   assert.deepEqual(
     new TodoStore(armazenamentoComFalha).listar(),
     [],
-    'falha ao ler o armazenamento deve carregar uma lista vazia',
+    "falha ao ler o armazenamento deve carregar uma lista vazia",
   );
 }
 
-test('carregar ignora dados persistidos inválidos e falhas de leitura', testarCarregamentoComDadosInvalidos);
+test(
+  "carregar ignora dados persistidos inválidos e falhas de leitura",
+  testarCarregamentoComDadosInvalidos,
+);
 
 export function testarOperacoesSemArmazenamento() {
   const store = new TodoStore(null);
-  assert.deepEqual(store.listar(), [], 'deve iniciar vazio sem armazenamento');
+  assert.deepEqual(store.listar(), [], "deve iniciar vazio sem armazenamento");
 
-  const tarefa = store.adicionar('Tarefa sem persistência');
-  assert.equal(tarefa.titulo, 'Tarefa sem persistência');
-  assert.equal(store.editar(tarefa.id, 'Título atualizado'), tarefa);
-  assert.equal(tarefa.titulo, 'Título atualizado');
-  assert.equal(store.atualizarStatus(tarefa.id, 'em-progresso'), tarefa);
-  assert.equal(tarefa.status, 'em-progresso');
+  const tarefa = store.adicionar("Tarefa sem persistência");
+  assert.equal(tarefa.titulo, "Tarefa sem persistência");
+  assert.equal(store.editar(tarefa.id, "Título atualizado"), tarefa);
+  assert.equal(tarefa.titulo, "Título atualizado");
+  assert.equal(store.atualizarStatus(tarefa.id, "em-progresso"), tarefa);
+  assert.equal(tarefa.status, "em-progresso");
   store.alternar(tarefa.id);
   assert.equal(tarefa.concluida, true);
 
   store.remover(tarefa.id);
-  assert.deepEqual(store.listar(), [], 'deve permitir remover tarefas sem armazenamento');
+  assert.deepEqual(
+    store.listar(),
+    [],
+    "deve permitir remover tarefas sem armazenamento",
+  );
 }
 
-test('operações do store funcionam sem armazenamento persistente', testarOperacoesSemArmazenamento);
+test(
+  "operações do store funcionam sem armazenamento persistente",
+  testarOperacoesSemArmazenamento,
+);
 
 export function testarListarRetornaCopiaDaLista() {
   const store = new TodoStore(null);
-  const tarefa = store.adicionar('Tarefa preservada');
+  const tarefa = store.adicionar("Tarefa preservada");
   const resultado = store.listar();
 
-  assert.notEqual(resultado, store.tarefas, 'deve devolver uma nova lista');
+  assert.notEqual(resultado, store.tarefas, "deve devolver uma nova lista");
   resultado.pop();
-  resultado.push({ id: 'externa' });
+  resultado.push({ id: "externa" });
 
-  assert.deepEqual(store.listar(), [tarefa], 'alterar a lista retornada não deve alterar o store');
+  assert.deepEqual(
+    store.listar(),
+    [tarefa],
+    "alterar a lista retornada não deve alterar o store",
+  );
 }
 
-test('listar protege a lista interna contra alterações no array retornado', testarListarRetornaCopiaDaLista);
+test(
+  "listar protege a lista interna contra alterações no array retornado",
+  testarListarRetornaCopiaDaLista,
+);
+
+export function testarPrioridadeEPrazo() {
+  const dados = new Map();
+  const armazenamento = {
+    getItem(chave) {
+      return dados.get(chave) ?? null;
+    },
+    setItem(chave, valor) {
+      dados.set(chave, valor);
+    },
+  };
+  const store = new TodoStore(armazenamento);
+
+  const alta = store.adicionar("Entregar relatório", "alta", "2026-11-20");
+  assert.equal(alta.prioridade, "alta");
+  assert.equal(alta.prazo, "2026-11-20");
+  assert.deepEqual(JSON.parse(dados.get("todolab:tarefas")), [alta]);
+  assert.ok(
+    store.estaAtrasada(alta, "2026-11-24"),
+    "prazo anterior a hoje deve ficar atrasado",
+  );
+  assert.equal(
+    store.estaAtrasada(alta, "2026-11-20"),
+    false,
+    "prazo igual a hoje não está atrasado",
+  );
+  assert.equal(
+    store.estaAtrasada(alta, "2026-11-19"),
+    false,
+    "prazo futuro não está atrasado",
+  );
+
+  const padrao = store.adicionar("Tarefa sem opções");
+  assert.equal(padrao.prioridade, "média");
+  assert.equal(padrao.prazo, null);
+
+  const mediaPorAlias = store.adicionar("Alias média", "media", " 2026-12-01 ");
+  assert.equal(mediaPorAlias.prioridade, "média");
+  assert.equal(mediaPorAlias.prazo, "2026-12-01");
+
+  for (const prioridade of ["", "urgente", null, 10]) {
+    const tarefa = store.adicionar(
+      `Prioridade inválida ${String(prioridade)}`,
+      prioridade,
+      null,
+    );
+    assert.equal(
+      tarefa.prioridade,
+      "média",
+      `deve normalizar prioridade inválida: ${String(prioridade)}`,
+    );
+  }
+
+  for (const prazo of [
+    "",
+    "2026-02-29",
+    "2026-13-01",
+    "20/11/2026",
+    "2026-11-20T10:00",
+    null,
+    20261120,
+  ]) {
+    const tarefa = store.adicionar(
+      `Prazo inválido ${String(prazo)}`,
+      "baixa",
+      prazo,
+    );
+    assert.equal(
+      tarefa.prazo,
+      null,
+      `deve rejeitar prazo inválido: ${String(prazo)}`,
+    );
+  }
+
+  store.alternar(alta.id);
+  assert.equal(
+    store.estaAtrasada(alta, "2026-11-24"),
+    false,
+    "tarefa concluída deixa de aparecer atrasada",
+  );
+
+  const legada = {
+    id: "legada-43",
+    titulo: "Tarefa antiga",
+    concluida: false,
+    criadaEm: "2026-01-01T00:00:00.000Z",
+  };
+  dados.set("todolab:tarefas", JSON.stringify([legada]));
+  const recarregadaLegada = new TodoStore(armazenamento).listar()[0];
+  assert.equal(recarregadaLegada.prioridade, "média");
+  assert.equal(recarregadaLegada.prazo, null);
+
+  dados.set("todolab:tarefas", JSON.stringify([{ ...alta, concluida: false }]));
+  const recarregada = new TodoStore(armazenamento);
+  assert.equal(recarregada.listar()[0].prioridade, "alta");
+  assert.equal(recarregada.listar()[0].prazo, "2026-11-20");
+  assert.ok(recarregada.estaAtrasada(recarregada.listar()[0], "2026-11-24"));
+}
+
+test(
+  "prioridade e prazo atendem criação, padrões, persistência, atraso e bordas",
+  testarPrioridadeEPrazo,
+);
